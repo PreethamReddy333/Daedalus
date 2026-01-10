@@ -1,27 +1,4 @@
-//! # Arithmetic MCP Server (WeilChain Applet)
-//!
-//! A minimal Model Context Protocol (MCP) applet exposing simple
-//! arithmetic utilities (`add`, `multiply`) for agentic workflows on WeilChain.
-//!
-//! ## Overview
-//! - **Surface**: Two pure functions: integer addition and multiplication.
-//! - **MCP Integration**: `tools()` describes callable functions for agents; `prompts()`
-//!   is a placeholder for future prompt templates.
-//! - **State**: This contract keeps no runtime state.
-//!
-//! ## Return & Error Semantics
-//! - `add(x, y)` → returns `x + y` as `i32`.
-//! - `multiply(x, y)` → returns `x * y` as `i32`.
-//! - Constructor returns an empty state; no secrets or configuration needed.
-//!
-//! ## Typical Usage (pseudocode)
-//! ```text
-//! // 1) Deploy the contract
-//! // 2) From an agent/runtime:
-//! call tools()       -> discover 'add' and 'multiply'
-//! call add{x, y}     -> receive integer sum
-//! call multiply{x,y} -> receive integer product
-//! ```
+
 
 use serde::{Deserialize, Serialize};
 use weil_macros::{WeilType, constructor, query, smart_contract};
