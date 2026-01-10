@@ -12,10 +12,11 @@
 //! - Timeline events tracked automatically
 
 use serde::{Deserialize, Serialize};
-use weil_macros::{constructor, query, smart_contract, WeilType};
-use weil_rs::collections::{WeilMap, WeilVec};
+use weil_macros::{constructor, query, mutate, smart_contract, WeilType};
+use weil_rs::collections::vec::WeilVec;
+use weil_rs::collections::WeilId;
 use weil_rs::config::Secrets;
-use weil_rs::runtime::call_contract;
+use weil_rs::runtime::Runtime;
 
 // ===== CONFIGURATION =====
 
@@ -94,11 +95,11 @@ pub struct DashboardCaseRecord {
 
 trait CaseManagement {
     fn new() -> Result<Self, String> where Self: Sized;
-    async fn create_case(&self, case_type: String, subject_entity: String, symbol: String, risk_score: u32, priority: String, summary: String) -> Result<String, String>;
-    async fn update_case_status(&self, case_id: String, new_status: String, status_note: String) -> Result<Case, String>;
-    async fn assign_case(&self, case_id: String, assigned_to: String) -> Result<Case, String>;
-    async fn add_evidence(&self, case_id: String, evidence_type: String, description: String, source: String) -> Result<String, String>;
-    async fn add_note(&self, case_id: String, author: String, content: String) -> Result<String, String>;
+    async fn create_case(&mut self, case_type: String, subject_entity: String, symbol: String, risk_score: u32, priority: String, summary: String) -> Result<String, String>;
+    async fn update_case_status(&mut self, case_id: String, new_status: String, status_note: String) -> Result<Case, String>;
+    async fn assign_case(&mut self, case_id: String, assigned_to: String) -> Result<Case, String>;
+    async fn add_evidence(&mut self, case_id: String, evidence_type: String, description: String, source: String) -> Result<String, String>;
+    async fn add_note(&mut self, case_id: String, author: String, content: String) -> Result<String, String>;
     async fn get_case(&self, case_id: String) -> Result<Case, String>;
     async fn list_open_cases(&self, priority_filter: String, limit: u32) -> Result<Vec<Case>, String>;
     async fn get_case_timeline(&self, case_id: String) -> Result<CaseTimeline, String>;
@@ -113,7 +114,8 @@ trait CaseManagement {
 #[derive(Serialize, Deserialize, WeilType)]
 pub struct CaseManagementContractState {
     secrets: Secrets<CaseManagementConfig>,
-    cases: WeilMap<String, Case>,
+    // Using WeilVec for cases to support iteration
+    cases: WeilVec<Case>,
     evidence: WeilVec<CaseEvidence>,
     notes: WeilVec<CaseNote>,
     events: WeilVec<CaseEvent>,
@@ -144,10 +146,11 @@ impl CaseManagementContractState {
                 summary: case.summary.clone(),
             };
             
-            let _ = call_contract::<String, String>(
-                &config.dashboard_contract_id,
-                "upsert_case",
-                (dashboard_case,),
+            let args = serde_json::to_string(&dashboard_case).unwrap();
+            let _ = Runtime::call_contract::<String>(
+                config.dashboard_contract_id.clone(),
+                "upsert_case".to_string(),
+                Some(args),
             );
         }
     }
@@ -164,18 +167,18 @@ impl CaseManagement for CaseManagementContractState {
     {
         Ok(CaseManagementContractState {
             secrets: Secrets::new(),
-            cases: WeilMap::new(1),
-            evidence: WeilVec::new(2),
-            notes: WeilVec::new(3),
-            events: WeilVec::new(4),
+            cases: WeilVec::new(WeilId(1)),
+            evidence: WeilVec::new(WeilId(2)),
+            notes: WeilVec::new(WeilId(3)),
+            events: WeilVec::new(WeilId(4)),
             case_counter: 0,
         })
     }
 
     /// Create a new investigation case
-    #[query]
+    #[mutate]
     async fn create_case(
-        &self, 
+        &mut self, 
         case_type: String, 
         subject_entity: String, 
         symbol: String, 
@@ -200,17 +203,16 @@ impl CaseManagement for CaseManagementContractState {
             summary,
         };
         
-        // Note: In a real impl, we'd use mutate and increment counter
-        // For query-only MCP, we simulate state
+        self.cases.push(case.clone());
         self.push_to_dashboard(&case);
         
         Ok(case_id)
     }
 
     /// Update case status
-    #[query]
+    #[mutate]
     async fn update_case_status(
-        &self, 
+        &mut self, 
         case_id: String, 
         new_status: String, 
         _status_note: String
@@ -221,43 +223,44 @@ impl CaseManagement for CaseManagementContractState {
             return Err(format!("Invalid status: {}. Must be one of: {:?}", new_status, valid_statuses));
         }
         
-        // Get existing case (would be from WeilMap in real impl)
-        let case = self.cases.get(&case_id)
-            .ok_or_else(|| format!("Case {} not found", case_id))?;
-        
-        // Create updated case
-        let updated_case = Case {
-            status: new_status,
-            updated_at: 0, // Would use Runtime::timestamp()
-            ..case
-        };
-        
-        self.push_to_dashboard(&updated_case);
-        
-        Ok(updated_case)
+        // Find and update existing case
+        let len = self.cases.len();
+        for i in 0..len {
+            if let Some(mut case) = self.cases.get(i) {
+                if case.case_id == case_id {
+                    case.status = new_status.clone();
+                    case.updated_at = 0;
+                    let _ = self.cases.set(i, case.clone());
+                    self.push_to_dashboard(&case);
+                    return Ok(case);
+                }
+            }
+        }
+        Err(format!("Case {} not found", case_id))
     }
 
     /// Assign case to investigator
-    #[query]
-    async fn assign_case(&self, case_id: String, assigned_to: String) -> Result<Case, String> {
-        let case = self.cases.get(&case_id)
-            .ok_or_else(|| format!("Case {} not found", case_id))?;
-        
-        let updated_case = Case {
-            assigned_to,
-            updated_at: 0,
-            ..case
-        };
-        
-        self.push_to_dashboard(&updated_case);
-        
-        Ok(updated_case)
+    #[mutate]
+    async fn assign_case(&mut self, case_id: String, assigned_to: String) -> Result<Case, String> {
+        let len = self.cases.len();
+        for i in 0..len {
+            if let Some(mut case) = self.cases.get(i) {
+                if case.case_id == case_id {
+                    case.assigned_to = assigned_to.clone();
+                    case.updated_at = 0;
+                    let _ = self.cases.set(i, case.clone());
+                    self.push_to_dashboard(&case);
+                    return Ok(case);
+                }
+            }
+        }
+        Err(format!("Case {} not found", case_id))
     }
 
     /// Add evidence to a case
-    #[query]
+    #[mutate]
     async fn add_evidence(
-        &self, 
+        &mut self, 
         case_id: String, 
         evidence_type: String, 
         description: String, 
@@ -265,7 +268,7 @@ impl CaseManagement for CaseManagementContractState {
     ) -> Result<String, String> {
         let evidence_id = format!("EV-{}-{}", case_id, self.evidence.len() + 1);
         
-        let _evidence = CaseEvidence {
+        let evidence = CaseEvidence {
             evidence_id: evidence_id.clone(),
             case_id,
             evidence_type,
@@ -273,22 +276,24 @@ impl CaseManagement for CaseManagementContractState {
             source,
             timestamp: 0,
         };
+        self.evidence.push(evidence);
         
         Ok(evidence_id)
     }
 
     /// Add a note to a case
-    #[query]
-    async fn add_note(&self, case_id: String, author: String, content: String) -> Result<String, String> {
+    #[mutate]
+    async fn add_note(&mut self, case_id: String, author: String, content: String) -> Result<String, String> {
         let note_id = format!("NOTE-{}-{}", case_id, self.notes.len() + 1);
         
-        let _note = CaseNote {
+        let note = CaseNote {
             note_id: note_id.clone(),
             case_id,
             author,
             content,
             timestamp: 0,
         };
+        self.notes.push(note);
         
         Ok(note_id)
     }
@@ -296,8 +301,15 @@ impl CaseManagement for CaseManagementContractState {
     /// Get case details
     #[query]
     async fn get_case(&self, case_id: String) -> Result<Case, String> {
-        self.cases.get(&case_id)
-            .ok_or_else(|| format!("Case {} not found", case_id))
+        let len = self.cases.len();
+        for i in 0..len {
+            if let Some(case) = self.cases.get(i) {
+                if case.case_id == case_id {
+                    return Ok(case);
+                }
+            }
+        }
+        Err(format!("Case {} not found", case_id))
     }
 
     /// List open cases by priority
@@ -306,17 +318,19 @@ impl CaseManagement for CaseManagementContractState {
         let mut result = Vec::new();
         let mut count = 0u32;
         
-        for (_, case) in self.cases.iter() {
+        let len = self.cases.len();
+        for i in 0..len {
             if count >= limit {
                 break;
             }
-            
-            // Filter by open status
-            if case.status != "CLOSED" {
-                // Filter by priority
-                if priority_filter == "ALL" || case.priority == priority_filter {
-                    result.push(case);
-                    count += 1;
+            if let Some(case) = self.cases.get(i) {
+                // Filter by open status
+                if case.status != "CLOSED" {
+                    // Filter by priority
+                    if priority_filter == "ALL" || case.priority == priority_filter {
+                        result.push(case);
+                        count += 1;
+                    }
                 }
             }
         }
@@ -362,9 +376,12 @@ impl CaseManagement for CaseManagementContractState {
     async fn get_entity_cases(&self, entity_id: String) -> Result<Vec<Case>, String> {
         let mut result = Vec::new();
         
-        for (_, case) in self.cases.iter() {
-            if case.subject_entity == entity_id {
-                result.push(case);
+        let len = self.cases.len();
+        for i in 0..len {
+            if let Some(case) = self.cases.get(i) {
+                if case.subject_entity == entity_id {
+                    result.push(case);
+                }
             }
         }
         
@@ -381,17 +398,20 @@ impl CaseManagement for CaseManagementContractState {
         let mut closed = 0u32;
         let mut critical = 0u32;
         
-        for (_, case) in self.cases.iter() {
-            total += 1;
-            match case.status.as_str() {
-                "OPEN" => open += 1,
-                "INVESTIGATING" => investigating += 1,
-                "ESCALATED" => escalated += 1,
-                "CLOSED" => closed += 1,
-                _ => {}
-            }
-            if case.priority == "CRITICAL" {
-                critical += 1;
+        let len = self.cases.len();
+        for i in 0..len {
+            if let Some(case) = self.cases.get(i) {
+                total += 1;
+                match case.status.as_str() {
+                    "OPEN" => open += 1,
+                    "INVESTIGATING" => investigating += 1,
+                    "ESCALATED" => escalated += 1,
+                    "CLOSED" => closed += 1,
+                    _ => {}
+                }
+                if case.priority == "CRITICAL" {
+                    critical += 1;
+                }
             }
         }
         
@@ -400,21 +420,161 @@ impl CaseManagement for CaseManagementContractState {
             total, open, investigating, escalated, closed, critical
         ))
     }
-
-    /// Returns JSON schema of available tools
     #[query]
     fn tools(&self) -> String {
         r#"[
-  {"type": "function", "function": {"name": "create_case", "description": "Create a new investigation case", "parameters": {"type": "object", "properties": {"case_type": {"type": "string", "description": "INSIDER_TRADING, SPOOFING, WASH_TRADING, PUMP_DUMP"}, "subject_entity": {"type": "string"}, "symbol": {"type": "string"}, "risk_score": {"type": "integer"}, "priority": {"type": "string", "description": "CRITICAL, HIGH, MEDIUM, LOW"}, "summary": {"type": "string"}}, "required": ["case_type", "subject_entity", "symbol", "risk_score", "priority", "summary"]}}},
-  {"type": "function", "function": {"name": "update_case_status", "description": "Update case status. Allowed: OPEN -> INVESTIGATING -> ESCALATED -> CLOSED", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}, "new_status": {"type": "string"}, "status_note": {"type": "string"}}, "required": ["case_id", "new_status", "status_note"]}}},
-  {"type": "function", "function": {"name": "assign_case", "description": "Assign case to an investigator", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}, "assigned_to": {"type": "string"}}, "required": ["case_id", "assigned_to"]}}},
-  {"type": "function", "function": {"name": "add_evidence", "description": "Add evidence to a case", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}, "evidence_type": {"type": "string", "description": "TRADE, COMMUNICATION, DOCUMENT, ANALYSIS"}, "description": {"type": "string"}, "source": {"type": "string"}}, "required": ["case_id", "evidence_type", "description", "source"]}}},
-  {"type": "function", "function": {"name": "add_note", "description": "Add a note to a case", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}, "author": {"type": "string"}, "content": {"type": "string"}}, "required": ["case_id", "author", "content"]}}},
-  {"type": "function", "function": {"name": "get_case", "description": "Get case details", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}}, "required": ["case_id"]}}},
-  {"type": "function", "function": {"name": "list_open_cases", "description": "List open cases by priority", "parameters": {"type": "object", "properties": {"priority_filter": {"type": "string", "description": "ALL, CRITICAL, HIGH, MEDIUM, LOW"}, "limit": {"type": "integer"}}, "required": ["priority_filter", "limit"]}}},
-  {"type": "function", "function": {"name": "get_case_timeline", "description": "Get case timeline (all events)", "parameters": {"type": "object", "properties": {"case_id": {"type": "string"}}, "required": ["case_id"]}}},
-  {"type": "function", "function": {"name": "get_entity_cases", "description": "Get cases for an entity", "parameters": {"type": "object", "properties": {"entity_id": {"type": "string"}}, "required": ["entity_id"]}}},
-  {"type": "function", "function": {"name": "get_case_stats", "description": "Get case statistics", "parameters": {"type": "object", "properties": {}, "required": []}}}
+  {
+    "type": "function",
+    "function": {
+      "name": "create_case",
+      "description": "Create a new investigation case. Returns the new case ID.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_type": { "type": "string", "enum": ["INSIDER_TRADING", "SPOOFING", "WASH_TRADING", "PUMP_DUMP"], "description": "Type of case" },
+          "subject_entity": { "type": "string", "description": "Subject entity (account ID or company ID)" },
+          "symbol": { "type": "string", "description": "Stock symbol involved" },
+          "risk_score": { "type": "integer", "description": "Initial risk score (0-100)" },
+          "priority": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Priority level" },
+          "summary": { "type": "string", "description": "Brief summary of the case" }
+        },
+        "required": ["case_type", "subject_entity", "symbol", "risk_score", "priority", "summary"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "update_case_status",
+      "description": "Update case status. Allowed: OPEN -> INVESTIGATING -> ESCALATED -> CLOSED",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID to update" },
+          "new_status": { "type": "string", "enum": ["OPEN", "INVESTIGATING", "ESCALATED", "CLOSED"], "description": "New status" },
+          "status_note": { "type": "string", "description": "Note explaining the status change" }
+        },
+        "required": ["case_id", "new_status", "status_note"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "assign_case",
+      "description": "Assign case to an investigator",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID to assign" },
+          "assigned_to": { "type": "string", "description": "Investigator ID or name" }
+        },
+        "required": ["case_id", "assigned_to"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_evidence",
+      "description": "Add evidence to a case",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID" },
+          "evidence_type": { "type": "string", "enum": ["TRADE", "COMMUNICATION", "DOCUMENT", "ANALYSIS"], "description": "Type of evidence" },
+          "description": { "type": "string", "description": "Description of the evidence" },
+          "source": { "type": "string", "description": "Source of the evidence" }
+        },
+        "required": ["case_id", "evidence_type", "description", "source"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "add_note",
+      "description": "Add a note to a case",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID" },
+          "author": { "type": "string", "description": "Author of the note" },
+          "content": { "type": "string", "description": "Note content" }
+        },
+        "required": ["case_id", "author", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_case",
+      "description": "Get case details by ID",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID to retrieve" }
+        },
+        "required": ["case_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "list_open_cases",
+      "description": "List open cases by priority",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "priority_filter": { "type": "string", "enum": ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Priority filter" },
+          "limit": { "type": "integer", "description": "Maximum number of cases to return" }
+        },
+        "required": ["priority_filter", "limit"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_case_timeline",
+      "description": "Get case timeline (all events in order)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Case ID" }
+        },
+        "required": ["case_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_entity_cases",
+      "description": "Get cases for a specific entity",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entity_id": { "type": "string", "description": "Entity ID to search for" }
+        },
+        "required": ["entity_id"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_case_stats",
+      "description": "Get case statistics",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  }
 ]"#.to_string()
     }
 

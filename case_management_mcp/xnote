@@ -1,0 +1,7 @@
+deplot -f /Users/preetham/Documents/demoo/surveillance_dashboard/target/wasm32-unknown-unknown/release/surveillance_dashboard.wasm -p /Users/preetham/Documents/demoo/surveillance_dashboard/surveillance_dashboard.widl -u config.yaml
+
+
+deploy -f /Users/preetham/Documents/demoo/case_management_mcp/target/wasm32-unknown-unknown/release/case_management_mcp.wasm -p /Users/preetham/Documents/demoo/case_management_mcp/case_management.widl -c /Users/preetham/Documents/demoo/case_management_mcp/config.yaml
+
+
+{"batch_author":"p-gas1m-0.asia-south1.main.weilliptic.net-8000","batch_id":"dfed1bdbf9f89eafe6a78b3e7b32f7ad02084ddb6720279e500adc327d45b192","block_height":769548,"contract_address":"aaaaaavi25yzgvr3e7yxgdhc53rm3bnjkuwgx2atm5tczhgpytxkd44o2y","creation_time":"2026-01-10T16:55:11Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaastnyt3pfclp2l5q6oexqjwetx46pasjmfbpobuymd7o23jvuw5r4"}

@@ -145,6 +145,7 @@ impl CaseManagement for CaseManagementContractState {
     }
 
 
+
     #[query]
     fn tools(&self) -> String {
         r#"[
@@ -152,43 +153,18 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "create_case",
-      "description": "Create a new investigation case\nReturns the new case ID\n",
+      "description": "Create a new investigation case. Returns the new case ID.",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_type": {
-            "type": "string",
-            "description": "Type of case: INSIDER_TRADING, SPOOFING, WASH_TRADING, PUMP_DUMP\n"
-          },
-          "subject_entity": {
-            "type": "string",
-            "description": "Subject entity (account ID or company ID)\n"
-          },
-          "symbol": {
-            "type": "string",
-            "description": "Stock symbol involved\n"
-          },
-          "risk_score": {
-            "type": "integer",
-            "description": "Initial risk score (0-100)\n"
-          },
-          "priority": {
-            "type": "string",
-            "description": "Priority: CRITICAL, HIGH, MEDIUM, LOW\n"
-          },
-          "summary": {
-            "type": "string",
-            "description": "Brief summary of the case\n"
-          }
+          "case_type": { "type": "string", "enum": ["INSIDER_TRADING", "SPOOFING", "WASH_TRADING", "PUMP_DUMP"], "description": "Type of case" },
+          "subject_entity": { "type": "string", "description": "Subject entity (account ID or company ID)" },
+          "symbol": { "type": "string", "description": "Stock symbol involved" },
+          "risk_score": { "type": "integer", "description": "Initial risk score (0-100)" },
+          "priority": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Priority level" },
+          "summary": { "type": "string", "description": "Brief summary of the case" }
         },
-        "required": [
-          "case_type",
-          "subject_entity",
-          "symbol",
-          "risk_score",
-          "priority",
-          "summary"
-        ]
+        "required": ["case_type", "subject_entity", "symbol", "risk_score", "priority", "summary"]
       }
     }
   },
@@ -196,28 +172,15 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "update_case_status",
-      "description": "Update case status\nAllowed transitions: OPEN -> INVESTIGATING -> ESCALATED -> CLOSED\n",
+      "description": "Update case status. Allowed: OPEN -> INVESTIGATING -> ESCALATED -> CLOSED",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID to update\n"
-          },
-          "new_status": {
-            "type": "string",
-            "description": "New status\n"
-          },
-          "status_note": {
-            "type": "string",
-            "description": "Note explaining the status change\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID to update" },
+          "new_status": { "type": "string", "enum": ["OPEN", "INVESTIGATING", "ESCALATED", "CLOSED"], "description": "New status" },
+          "status_note": { "type": "string", "description": "Note explaining the status change" }
         },
-        "required": [
-          "case_id",
-          "new_status",
-          "status_note"
-        ]
+        "required": ["case_id", "new_status", "status_note"]
       }
     }
   },
@@ -225,23 +188,14 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "assign_case",
-      "description": "Assign case to an investigator\n",
+      "description": "Assign case to an investigator",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID to assign\n"
-          },
-          "assigned_to": {
-            "type": "string",
-            "description": "Investigator ID or name\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID to assign" },
+          "assigned_to": { "type": "string", "description": "Investigator ID or name" }
         },
-        "required": [
-          "case_id",
-          "assigned_to"
-        ]
+        "required": ["case_id", "assigned_to"]
       }
     }
   },
@@ -249,33 +203,16 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "add_evidence",
-      "description": "Add evidence to a case\n",
+      "description": "Add evidence to a case",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID\n"
-          },
-          "evidence_type": {
-            "type": "string",
-            "description": "Type: TRADE, COMMUNICATION, DOCUMENT, ANALYSIS\n"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description of the evidence\n"
-          },
-          "source": {
-            "type": "string",
-            "description": "Source of the evidence\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID" },
+          "evidence_type": { "type": "string", "enum": ["TRADE", "COMMUNICATION", "DOCUMENT", "ANALYSIS"], "description": "Type of evidence" },
+          "description": { "type": "string", "description": "Description of the evidence" },
+          "source": { "type": "string", "description": "Source of the evidence" }
         },
-        "required": [
-          "case_id",
-          "evidence_type",
-          "description",
-          "source"
-        ]
+        "required": ["case_id", "evidence_type", "description", "source"]
       }
     }
   },
@@ -283,28 +220,15 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "add_note",
-      "description": "Add a note to a case\n",
+      "description": "Add a note to a case",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID\n"
-          },
-          "author": {
-            "type": "string",
-            "description": "Author of the note\n"
-          },
-          "content": {
-            "type": "string",
-            "description": "Note content\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID" },
+          "author": { "type": "string", "description": "Author of the note" },
+          "content": { "type": "string", "description": "Note content" }
         },
-        "required": [
-          "case_id",
-          "author",
-          "content"
-        ]
+        "required": ["case_id", "author", "content"]
       }
     }
   },
@@ -312,18 +236,13 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "get_case",
-      "description": "Get case details\n",
+      "description": "Get case details by ID",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID to retrieve" }
         },
-        "required": [
-          "case_id"
-        ]
+        "required": ["case_id"]
       }
     }
   },
@@ -331,23 +250,14 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "list_open_cases",
-      "description": "List open cases by priority\n",
+      "description": "List open cases by priority",
       "parameters": {
         "type": "object",
         "properties": {
-          "priority_filter": {
-            "type": "string",
-            "description": "Priority filter: ALL, CRITICAL, HIGH, MEDIUM, LOW\n"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Maximum number of cases to return\n"
-          }
+          "priority_filter": { "type": "string", "enum": ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Priority filter" },
+          "limit": { "type": "integer", "description": "Maximum number of cases to return" }
         },
-        "required": [
-          "priority_filter",
-          "limit"
-        ]
+        "required": ["priority_filter", "limit"]
       }
     }
   },
@@ -355,18 +265,13 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "get_case_timeline",
-      "description": "Get case timeline (all events in order)\n",
+      "description": "Get case timeline (all events in order)",
       "parameters": {
         "type": "object",
         "properties": {
-          "case_id": {
-            "type": "string",
-            "description": "Case ID\n"
-          }
+          "case_id": { "type": "string", "description": "Case ID" }
         },
-        "required": [
-          "case_id"
-        ]
+        "required": ["case_id"]
       }
     }
   },
@@ -374,18 +279,13 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "get_entity_cases",
-      "description": "Get cases for a specific entity\n",
+      "description": "Get cases for a specific entity",
       "parameters": {
         "type": "object",
         "properties": {
-          "entity_id": {
-            "type": "string",
-            "description": "Entity ID to search for\n"
-          }
+          "entity_id": { "type": "string", "description": "Entity ID to search for" }
         },
-        "required": [
-          "entity_id"
-        ]
+        "required": ["entity_id"]
       }
     }
   },
@@ -393,7 +293,7 @@ impl CaseManagement for CaseManagementContractState {
     "type": "function",
     "function": {
       "name": "get_case_stats",
-      "description": "Get case statistics\n",
+      "description": "Get case statistics",
       "parameters": {
         "type": "object",
         "properties": {},
@@ -404,12 +304,8 @@ impl CaseManagement for CaseManagementContractState {
 ]"#.to_string()
     }
 
-
     #[query]
     fn prompts(&self) -> String {
-        r#"{
-  "prompts": []
-}"#.to_string()
+        r#"{ "prompts": [] }"#.to_string()
     }
 }
-

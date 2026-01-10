@@ -383,6 +383,104 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
   {
     "type": "function",
     "function": {
+      "name": "push_alert",
+      "description": "Push a new surveillance alert to the dashboard",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "Unique alert ID" },
+          "alert_type": { "type": "string", "enum": ["INSIDER", "SPOOFING", "WASH_TRADE", "PUMP_DUMP", "FRONT_RUN"], "description": "Type of alert" },
+          "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Severity level" },
+          "risk_score": { "type": "integer", "description": "Risk score (0-100)" },
+          "entity_id": { "type": "string", "description": "Entity ID involved" },
+          "symbol": { "type": "string", "description": "Stock symbol" },
+          "description": { "type": "string", "description": "Alert description" },
+          "workflow_id": { "type": "string", "description": "Associated workflow ID" },
+          "timestamp": { "type": "integer", "description": "Unix timestamp" }
+        },
+        "required": ["id", "alert_type", "severity", "risk_score", "entity_id", "symbol", "description", "workflow_id", "timestamp"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "log_workflow_start",
+      "description": "Log the start of a workflow execution",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "workflow_id": { "type": "string", "description": "Unique workflow ID" },
+          "workflow_type": { "type": "string", "enum": ["INSIDER_DETECTION", "MANIPULATION_CHECK", "KYC_ONBOARD"], "description": "Type of workflow" },
+          "trigger": { "type": "string", "description": "What triggered this workflow" },
+          "total_steps": { "type": "integer", "description": "Total number of steps in workflow" }
+        },
+        "required": ["workflow_id", "workflow_type", "trigger", "total_steps"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "update_workflow_progress",
+      "description": "Update workflow execution progress",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "workflow_id": { "type": "string", "description": "Workflow ID to update" },
+          "steps_completed": { "type": "integer", "description": "Number of steps completed" },
+          "status": { "type": "string", "enum": ["RUNNING", "COMPLETED", "FAILED"], "description": "Current status" },
+          "result_summary": { "type": "string", "description": "Summary of results" }
+        },
+        "required": ["workflow_id", "steps_completed", "status", "result_summary"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "upsert_case",
+      "description": "Create or update a case record in the dashboard",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": { "type": "string", "description": "Unique case ID" },
+          "case_type": { "type": "string", "enum": ["INSIDER_TRADING", "SPOOFING", "WASH_TRADING"], "description": "Type of case" },
+          "status": { "type": "string", "enum": ["OPEN", "INVESTIGATING", "ESCALATED", "CLOSED"], "description": "Case status" },
+          "priority": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Priority level" },
+          "subject_entity": { "type": "string", "description": "Subject entity ID" },
+          "symbol": { "type": "string", "description": "Stock symbol" },
+          "risk_score": { "type": "integer", "description": "Risk score (0-100)" },
+          "assigned_to": { "type": "string", "description": "Assigned investigator" },
+          "created_at": { "type": "integer", "description": "Creation timestamp" },
+          "updated_at": { "type": "integer", "description": "Last update timestamp" },
+          "summary": { "type": "string", "description": "Case summary" }
+        },
+        "required": ["case_id", "case_type", "status", "priority", "subject_entity", "symbol", "risk_score", "assigned_to", "created_at", "updated_at", "summary"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "register_risk_entity",
+      "description": "Register or update a high-risk entity",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entity_id": { "type": "string", "description": "Entity ID" },
+          "entity_name": { "type": "string", "description": "Entity name" },
+          "risk_score": { "type": "integer", "description": "Risk score (0-100)" },
+          "alert_count": { "type": "integer", "description": "Number of alerts" },
+          "last_alert_at": { "type": "integer", "description": "Last alert timestamp" }
+        },
+        "required": ["entity_id", "entity_name", "risk_score", "alert_count", "last_alert_at"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_live_alerts",
       "description": "Get latest surveillance alerts. Use filter='ALL' for everything.",
       "parameters": {

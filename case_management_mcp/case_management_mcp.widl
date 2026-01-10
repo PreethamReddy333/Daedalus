@@ -59,7 +59,7 @@ interface CaseManagement {
 
     // Create a new investigation case
     // Returns the new case ID
-    query func create_case(
+    mutate func create_case(
         // Type of case: INSIDER_TRADING, SPOOFING, WASH_TRADING, PUMP_DUMP
         case_type: string,
         // Subject entity (account ID or company ID)
@@ -76,7 +76,7 @@ interface CaseManagement {
 
     // Update case status
     // Allowed transitions: OPEN -> INVESTIGATING -> ESCALATED -> CLOSED
-    query func update_case_status(
+    mutate func update_case_status(
         // Case ID to update
         case_id: string,
         // New status
@@ -86,7 +86,7 @@ interface CaseManagement {
     ) -> result<Case, string>;
 
     // Assign case to an investigator
-    query func assign_case(
+    mutate func assign_case(
         // Case ID to assign
         case_id: string,
         // Investigator ID or name
@@ -94,7 +94,7 @@ interface CaseManagement {
     ) -> result<Case, string>;
 
     // Add evidence to a case
-    query func add_evidence(
+    mutate func add_evidence(
         // Case ID
         case_id: string,
         // Type: TRADE, COMMUNICATION, DOCUMENT, ANALYSIS
@@ -106,7 +106,7 @@ interface CaseManagement {
     ) -> result<string, string>;
 
     // Add a note to a case
-    query func add_note(
+    mutate func add_note(
         // Case ID
         case_id: string,
         // Author of the note
