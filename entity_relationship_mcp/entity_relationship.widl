@@ -1,0 +1,111 @@
+// Entity Relationship MCP - Uses Neo4j Aura Graph Database
+// Maps relationships between entities (traders, companies, insiders)
+
+// ===== Configuration =====
+record EntityRelationshipConfig {
+    dashboard_contract_id: string,
+    neo4j_uri: string,
+    neo4j_user: string,
+    neo4j_password: string
+}
+
+// ===== Data Structures =====
+
+record Entity {
+    entity_id: string,
+    entity_type: string,      // "INDIVIDUAL", "COMPANY", "FUND", "BROKER"
+    name: string,
+    pan_number: string,       // Indian PAN for identification
+    registration_id: string   // SEBI registration if applicable
+}
+
+record Relationship {
+    source_entity_id: string,
+    target_entity_id: string,
+    relationship_type: string,  // "FAMILY", "EMPLOYER", "DIRECTOR", "SHAREHOLDER", "BENEFICIAL_OWNER"
+    relationship_detail: string,
+    strength: u32,              // 1-10 relationship strength
+    verified: bool
+}
+
+record EntityConnection {
+    entity_id: string,
+    connected_entity_id: string,
+    connection_path: string,    // e.g., "A -> B -> C"
+    hops: u32,                  // Number of connections
+    relationship_types: string  // Comma-separated relationship types in path
+}
+
+record InsiderStatus {
+    entity_id: string,
+    company_symbol: string,
+    is_insider: bool,
+    insider_type: string,      // "PROMOTER", "DIRECTOR", "KMP", "DESIGNATED_PERSON"
+    designation: string,
+    window_status: string      // "OPEN", "CLOSED"
+}
+
+// ===== MCP Interface =====
+
+@mcp
+interface EntityRelationship {
+    config -> EntityRelationshipConfig;
+
+    // Get entity details by ID from Neo4j
+    query func get_entity(
+        // Entity identifier
+        entity_id: string
+    ) -> result<Entity, string>;
+
+    // Search entities by name or PAN in Neo4j
+    query func search_entities(
+        // Search query (name or PAN)
+        search_query: string,
+        // Maximum results
+        limit: u32
+    ) -> result<list<Entity>, string>;
+
+    // Get all relationships for an entity from Neo4j graph
+    query func get_relationships(
+        // Entity to get relationships for
+        entity_id: string
+    ) -> result<list<Relationship>, string>;
+
+    // Get connected entities within N hops using Neo4j graph traversal
+    query func get_connected_entities(
+        // Starting entity
+        entity_id: string,
+        // Maximum hops to traverse (1-5)
+        max_hops: u32
+    ) -> result<list<EntityConnection>, string>;
+
+    // Check if entity is an insider for a company
+    query func check_insider_status(
+        // Entity to check
+        entity_id: string,
+        // Company symbol
+        company_symbol: string
+    ) -> result<InsiderStatus, string>;
+
+    // Get all insiders for a company from Neo4j
+    query func get_company_insiders(
+        // Company symbol
+        company_symbol: string
+    ) -> result<list<InsiderStatus>, string>;
+
+    // Check if two entities are connected using Neo4j shortest path
+    query func are_entities_connected(
+        // First entity
+        entity_id_1: string,
+        // Second entity
+        entity_id_2: string,
+        // Maximum hops to check
+        max_hops: u32
+    ) -> result<EntityConnection, string>;
+
+    // Get family members of an entity
+    query func get_family_members(
+        // Entity ID
+        entity_id: string
+    ) -> result<list<Entity>, string>
+}

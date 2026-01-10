@@ -1,0 +1,23 @@
+# Regulatory Reports MCP Configuration
+# =====================================
+# Generates reports by fetching data from Dashboard and Case Management
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+# Get this after deploying surveillance_dashboard first
+dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+
+# REQUIRED: Contract ID of the case_management_mcp
+# Get this after deploying case_management_mcp
+case_management_contract_id: "<PASTE_CASE_MANAGEMENT_CONTRACT_ID_HERE>"
+
+# Path for storing generated reports
+# This is a virtual path within the applet's storage
+report_storage_path: "/reports"
+
+# OPTIONAL: SEBI API endpoint for direct submission
+sebi_api_endpoint: ""
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/regulatory_reports_mcp.wasm \
+#          -p regulatory_reports.widl \
+#          -c config.yaml

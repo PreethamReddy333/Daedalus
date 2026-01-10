@@ -1,0 +1,118 @@
+// Regulatory Reports MCP - Generates compliance reports
+// Fetches data across applets (Dashboard, Case Management) to compile reports
+
+// ===== Configuration =====
+record RegulatoryReportsConfig {
+    dashboard_contract_id: string,
+    case_management_contract_id: string,
+    report_storage_path: string,
+    sebi_api_endpoint: string
+}
+
+// ===== Data Structures =====
+
+record STRReport {
+    str_id: string,
+    report_date: string,
+    suspicious_entity_id: string,
+    suspicious_entity_name: string,
+    suspicious_activity_type: string,
+    transaction_details: string,
+    total_value: string,
+    suspicion_reason: string,
+    investigation_summary: string,
+    recommendation: string,
+    generated_at: u64
+}
+
+record MarketSurveillanceReport {
+    report_id: string,
+    report_period: string,
+    total_alerts: u32,
+    critical_alerts: u32,
+    investigations_opened: u32,
+    investigations_closed: u32,
+    manipulation_cases: u32,
+    insider_trading_cases: u32,
+    enforcement_actions: u32,
+    summary: string
+}
+
+record ComplianceScorecard {
+    entity_id: string,
+    entity_name: string,
+    reporting_period: string,
+    overall_score: u32,
+    kyc_compliance: u32,
+    aml_compliance: u32,
+    surveillance_compliance: u32,
+    reporting_compliance: u32,
+    violations_count: u32,
+    last_updated: u64
+}
+
+record ReportGenerationResult {
+    report_id: string,
+    report_type: string,
+    file_path: string,
+    generated_at: u64,
+    success: bool,
+    error: string
+}
+
+// ===== MCP Interface =====
+
+@mcp
+interface RegulatoryReports {
+    config -> RegulatoryReportsConfig;
+
+    // Generate Suspicious Transaction Report
+    query func generate_str(
+        case_id: string,
+        entity_id: string,
+        suspicious_activity_type: string,
+        transaction_details: string,
+        total_value: string,
+        suspicion_reason: string
+    ) -> result<STRReport, string>;
+
+    // Generate periodic market surveillance report
+    query func generate_surveillance_report(
+        from_date: string,
+        to_date: string,
+        report_type: string
+    ) -> result<MarketSurveillanceReport, string>;
+
+    // Generate compliance scorecard for an entity
+    query func generate_compliance_scorecard(
+        entity_id: string,
+        period: string,
+        year: u32
+    ) -> result<ComplianceScorecard, string>;
+
+    // Generate GSM (Graded Surveillance Measure) stock report
+    query func generate_gsm_report(
+        report_date: string
+    ) -> result<ReportGenerationResult, string>;
+
+    // Generate ESM (Enhanced Surveillance Measure) stock report
+    query func generate_esm_report(
+        report_date: string
+    ) -> result<ReportGenerationResult, string>;
+
+    // Get list of pending STRs
+    query func get_pending_strs(
+        limit: u32
+    ) -> result<list<STRReport>, string>;
+
+    // Submit STR to regulatory authority
+    query func submit_str(
+        str_id: string
+    ) -> result<ReportGenerationResult, string>;
+
+    // Generate ad-hoc investigation report
+    query func generate_investigation_report(
+        case_id: string,
+        include_evidence: bool
+    ) -> result<ReportGenerationResult, string>
+}

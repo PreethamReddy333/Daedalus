@@ -1,0 +1,29 @@
+# Entity Relationship MCP Configuration
+# ======================================
+# Uses Neo4j Aura (Free tier) for graph database
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+# Get this after deploying surveillance_dashboard first
+dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+
+# REQUIRED: Neo4j Aura connection details
+# Get these from: https://console.neo4j.io (free signup)
+# 
+# After creating a free AuraDB instance, you'll get:
+# - Connection URI (neo4j+s://xxxxx.databases.neo4j.io)
+# - Username (usually "neo4j")
+# - Password (auto-generated, save it!)
+
+# Neo4j Aura URI (format: neo4j+s://xxxxx.databases.neo4j.io)
+neo4j_uri: "<YOUR_NEO4J_AURA_URI>"
+
+# Neo4j username (usually "neo4j")
+neo4j_user: "neo4j"
+
+# Neo4j password (from Aura console)
+neo4j_password: "<YOUR_NEO4J_PASSWORD>"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm \
+#          -p entity_relationship.widl \
+#          -c config.yaml

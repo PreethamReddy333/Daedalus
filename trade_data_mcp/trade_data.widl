@@ -1,0 +1,166 @@
+// Trade Data MCP - Fetches and analyzes trade executions
+// This MCP provides trade data to other MCPs and Icarus workflows
+// It can call the Dashboard to log alerts when anomalies are detected
+
+// ===== Configuration =====
+record TradeDataConfig {
+    // API endpoint for trade data (could be Zerodha Kite, synthetic API, etc.)
+    api_endpoint: string,
+    // API key for authentication
+    api_key: string,
+    // Dashboard contract ID for cross-contract calls
+    dashboard_contract_id: string
+}
+
+// ===== Data Structures =====
+
+record Trade {
+    trade_id: string,
+    symbol: string,
+    account_id: string,
+    trade_type: string,       // "BUY" or "SELL"
+    quantity: u64,
+    price: string,            // Using string for decimal precision
+    value: string,
+    exchange: string,         // "NSE" or "BSE"
+    segment: string,          // "EQUITY", "FNO", "CURRENCY"
+    timestamp: u64,
+    order_id: string
+}
+
+record TradeAnalysis {
+    symbol: string,
+    total_volume: u64,
+    avg_price: string,
+    high_price: string,
+    low_price: string,
+    buy_volume: u64,
+    sell_volume: u64,
+    trade_count: u32,
+    concentration_ratio: string  // Top 5 accounts % of volume
+}
+
+record VolumeAnomaly {
+    symbol: string,
+    current_volume: u64,
+    avg_volume_30d: u64,
+    volume_ratio: string,     // current / avg
+    is_anomaly: bool,
+    anomaly_score: u32
+}
+
+record AccountActivity {
+    account_id: string,
+    symbol: string,
+    buy_quantity: u64,
+    sell_quantity: u64,
+    net_position: i64,
+    trade_count: u32,
+    first_trade_time: u64,
+    last_trade_time: u64
+}
+
+// ===== MCP Interface =====
+
+@mcp
+interface TradeData {
+    config -> TradeDataConfig;
+
+    // Fetch a single trade by ID
+    query func get_trade(
+        // Unique trade identifier
+        trade_id: string
+    ) -> result<Trade, string>;
+
+    // Fetch trades for a symbol within a date range
+    // Returns trades sorted by timestamp descending
+    query func get_trades_by_symbol(
+        // Stock symbol (e.g., "TATASTEEL", "RELIANCE")
+        symbol: string,
+        // Start timestamp in milliseconds
+        from_timestamp: u64,
+        // End timestamp in milliseconds
+        to_timestamp: u64,
+        // Maximum number of trades to return
+        limit: u32
+    ) -> result<list<Trade>, string>;
+
+    // Fetch trades for a specific account
+    // Used for tracking individual trader activity
+    query func get_trades_by_account(
+        // Trading account ID
+        account_id: string,
+        // Start timestamp in milliseconds
+        from_timestamp: u64,
+        // End timestamp in milliseconds
+        to_timestamp: u64,
+        // Maximum number of trades to return
+        limit: u32
+    ) -> result<list<Trade>, string>;
+
+    // Get trades by multiple accounts (for entity relationship checks)
+    // Used to find trades by connected entities
+    query func get_trades_by_accounts(
+        // Comma-separated list of account IDs
+        account_ids: string,
+        // Stock symbol to filter by
+        symbol: string,
+        // Start timestamp in milliseconds
+        from_timestamp: u64,
+        // End timestamp in milliseconds
+        to_timestamp: u64
+    ) -> result<list<Trade>, string>;
+
+    // Analyze volume for a symbol
+    // Returns aggregated volume statistics
+    query func analyze_volume(
+        // Stock symbol
+        symbol: string,
+        // Start timestamp
+        from_timestamp: u64,
+        // End timestamp
+        to_timestamp: u64
+    ) -> result<TradeAnalysis, string>;
+
+    // Detect volume anomalies
+    // Compares current volume against 30-day average
+    query func detect_volume_anomaly(
+        // Stock symbol
+        symbol: string,
+        // Current day timestamp
+        date_timestamp: u64
+    ) -> result<VolumeAnomaly, string>;
+
+    // Get top traders for a symbol (for concentration analysis)
+    // Returns accounts with highest trading volume
+    query func get_top_traders(
+        // Stock symbol
+        symbol: string,
+        // Start timestamp
+        from_timestamp: u64,
+        // End timestamp
+        to_timestamp: u64,
+        // Number of top traders to return
+        limit: u32
+    ) -> result<list<AccountActivity>, string>;
+
+    // Fetch large institutional orders
+    // Used for front-running detection
+    query func get_large_orders(
+        // Minimum order value in rupees
+        min_value: u64,
+        // Start timestamp
+        from_timestamp: u64,
+        // End timestamp
+        to_timestamp: u64
+    ) -> result<list<Trade>, string>;
+
+    // Get trading activity for an account across all symbols
+    // Used for account profiling
+    query func get_account_profile(
+        // Trading account ID
+        account_id: string,
+        // Number of days to analyze
+        days_back: u32
+    ) -> result<list<AccountActivity>, string>
+}

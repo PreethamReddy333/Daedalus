@@ -1,0 +1,117 @@
+// Anomaly Detection MCP - Uses Alpha Vantage & TAAPI.IO for market pattern analysis
+// Detects spoofing, wash trading, pump & dump schemes
+
+// ===== Configuration =====
+record AnomalyDetectionConfig {
+    dashboard_contract_id: string,
+    alpha_vantage_key: string,
+    taapi_secret: string
+}
+
+// ===== Data Structures =====
+
+record AnomalyResult {
+    entity_id: string,
+    symbol: string,
+    anomaly_type: string,     // "SPOOFING", "WASH_TRADE", "PUMP_DUMP", "FRONT_RUNNING", "VOLUME_SPIKE"
+    confidence_score: u32,
+    details: string,
+    timestamp: u64,
+    supporting_evidence: string
+}
+
+record SpoofingIndicator {
+    order_id: string,
+    is_spoof: bool,
+    cancellation_rate: string,
+    order_size_vs_market: string,
+    price_impact: string
+}
+
+record WashTradeIndicator {
+    entity_id: string,
+    counterparty_id: string,
+    is_wash_trade: bool,
+    volume_match: bool,
+    price_match: bool,
+    time_gap_seconds: u32
+}
+
+record PumpDumpIndicator {
+    symbol: string,
+    is_pump_dump: bool,
+    price_velocity: string,
+    volume_surge: string,
+    social_sentiment_score: i32
+}
+
+// ===== MCP Interface =====
+
+@mcp
+interface AnomalyDetection {
+    config -> AnomalyDetectionConfig;
+
+    // Detect spoofing patterns in an order using market depth data
+    query func detect_spoofing(
+        // Order ID
+        order_id: string,
+        // Entity placing the order
+        entity_id: string,
+        // Symbol
+        symbol: string,
+        // Order details
+        order_details: string
+    ) -> result<SpoofingIndicator, string>;
+
+    // Detect wash trading between two entities
+    query func detect_wash_trading(
+        // First entity ID
+        entity_id: string,
+        // Second entity ID
+        counterparty_id: string,
+        // Symbol
+        symbol: string,
+        // Trade timestamp
+        trade_timestamp: u64
+    ) -> result<WashTradeIndicator, string>;
+
+    // Detect Pump & Dump schemes for a symbol
+    query func detect_pump_dump(
+        // Symbol to analyze
+        symbol: string,
+        // Time window in minutes
+        time_window_minutes: u32
+    ) -> result<PumpDumpIndicator, string>;
+
+    // Detect potential front-running
+    query func detect_front_running(
+        // Broker/Entity ID
+        entity_id: string,
+        // Symbol
+        symbol: string,
+        // Client trade timestamp
+        client_trade_timestamp: u64,
+        // Proprietary trade timestamp
+        prop_trade_timestamp: u64
+    ) -> result<AnomalyResult, string>;
+
+    // Analyze volume anomalies using TAAPI
+    query func analyze_volume_anomaly(
+        // Symbol
+        symbol: string,
+        // Interval (1min, 5min, 15min)
+        interval: string
+    ) -> result<AnomalyResult, string>;
+
+    // Calculate RSI to check overbought/oversold conditions (Alpha Vantage)
+    query func check_rsi_levels(
+        // Symbol
+        symbol: string
+    ) -> result<string, string>;
+
+    // Run full anomaly scan for an entity
+    query func scan_entity_anomalies(
+        // Entity ID
+        entity_id: string
+    ) -> result<list<AnomalyResult>, string>
+}

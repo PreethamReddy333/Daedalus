@@ -1,0 +1,80 @@
+# UPSI Database MCP Configuration
+# ================================
+# Uses Supabase (PostgreSQL + REST API) for UPSI records
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+
+# REQUIRED: Supabase project URL
+# Get this from: https://supabase.com/dashboard/project/_/settings/api
+# Example: "https://xyzproject.supabase.co"
+supabase_url: "<YOUR_SUPABASE_PROJECT_URL>"
+
+# REQUIRED: Supabase anon/public key
+# Get this from: https://supabase.com/dashboard/project/_/settings/api
+# Use the "anon" "public" key (safe for client-side use with RLS)
+supabase_anon_key: "<YOUR_SUPABASE_ANON_KEY>"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/upsi_database_mcp.wasm \
+#          -p upsi_database.widl \
+#          -c config.yaml
+
+# =====================================================
+# SUPABASE TABLE SCHEMA (Run these in SQL Editor)
+# =====================================================
+#
+# -- 1. UPSI Records table
+# CREATE TABLE upsi_records (
+#   upsi_id TEXT PRIMARY KEY,
+#   company_symbol TEXT NOT NULL,
+#   upsi_type TEXT NOT NULL,  -- 'FINANCIAL_RESULTS', 'MERGER', 'DIVIDEND', etc.
+#   description TEXT,
+#   nature TEXT,              -- 'POSITIVE', 'NEGATIVE', 'NEUTRAL'
+#   created_date BIGINT NOT NULL,
+#   public_date BIGINT DEFAULT 0,
+#   is_public BOOLEAN DEFAULT FALSE,
+#   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+# );
+#
+# -- 2. UPSI Access Log table
+# CREATE TABLE upsi_access_log (
+#   access_id TEXT PRIMARY KEY,
+#   upsi_id TEXT REFERENCES upsi_records(upsi_id),
+#   accessor_entity_id TEXT NOT NULL,
+#   accessor_name TEXT,
+#   accessor_designation TEXT,
+#   access_timestamp BIGINT NOT NULL,
+#   access_reason TEXT,
+#   access_mode TEXT,  -- 'VIEW', 'MODIFY', 'SHARE'
+#   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+# );
+#
+# -- 3. Trading Window table
+# CREATE TABLE trading_windows (
+#   id SERIAL PRIMARY KEY,
+#   company_symbol TEXT NOT NULL,
+#   window_status TEXT NOT NULL,  -- 'OPEN', 'CLOSED'
+#   closure_reason TEXT,
+#   closure_start BIGINT,
+#   expected_opening BIGINT,
+#   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+#   UNIQUE(company_symbol)
+# );
+#
+# -- Create indexes for performance
+# CREATE INDEX idx_upsi_company ON upsi_records(company_symbol);
+# CREATE INDEX idx_upsi_public ON upsi_records(is_public);
+# CREATE INDEX idx_access_upsi ON upsi_access_log(upsi_id);
+# CREATE INDEX idx_access_entity ON upsi_access_log(accessor_entity_id);
+# CREATE INDEX idx_window_symbol ON trading_windows(company_symbol);
+#
+# -- Enable Row Level Security (optional but recommended)
+# ALTER TABLE upsi_records ENABLE ROW LEVEL SECURITY;
+# ALTER TABLE upsi_access_log ENABLE ROW LEVEL SECURITY;
+# ALTER TABLE trading_windows ENABLE ROW LEVEL SECURITY;
+#
+# -- Policy to allow read for all (adjust as needed)
+# CREATE POLICY "Allow read access" ON upsi_records FOR SELECT USING (true);
+# CREATE POLICY "Allow read access" ON upsi_access_log FOR SELECT USING (true);
+# CREATE POLICY "Allow read access" ON trading_windows FOR SELECT USING (true);

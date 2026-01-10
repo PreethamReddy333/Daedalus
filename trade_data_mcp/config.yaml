@@ -1,0 +1,24 @@
+# Trade Data MCP Configuration
+# =============================
+# Fill in these values before deployment.
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+# Get this after deploying surveillance_dashboard first
+# Example: "0x1234abcd5678efgh..."
+dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+
+# REQUIRED: API endpoint for trade data
+# Options:
+#   - NSE API: "https://www.nseindia.com/api"
+#   - Zerodha Kite: "https://api.kite.trade"
+#   - Custom/Mock: "https://your-trade-api.com"
+api_endpoint: "<YOUR_TRADE_DATA_API_ENDPOINT>"
+
+# REQUIRED: API key for authentication
+# Get this from your data provider (NSE, Zerodha, etc.)
+api_key: "<YOUR_API_KEY>"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/trade_data_mcp.wasm \
+#          -p trade_data.widl \
+#          -c config.yaml

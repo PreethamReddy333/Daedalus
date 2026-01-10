@@ -1,0 +1,110 @@
+// UPSI Database MCP - Uses Supabase PostgreSQL for UPSI tracking
+// Tracks Unpublished Price Sensitive Information access
+
+// ===== Configuration =====
+record UPSIDatabaseConfig {
+    dashboard_contract_id: string,
+    supabase_url: string,
+    supabase_anon_key: string
+}
+
+// ===== Data Structures =====
+
+record UPSIRecord {
+    upsi_id: string,
+    company_symbol: string,
+    upsi_type: string,        // "FINANCIAL_RESULTS", "MERGER", "DIVIDEND", "RIGHTS_ISSUE", "BONUS"
+    description: string,
+    nature: string,           // "POSITIVE", "NEGATIVE", "NEUTRAL"
+    created_date: u64,
+    public_date: u64,         // When it became public (0 if still UPSI)
+    is_public: bool
+}
+
+record UPSIAccessLog {
+    access_id: string,
+    upsi_id: string,
+    accessor_entity_id: string,
+    accessor_name: string,
+    accessor_designation: string,
+    access_timestamp: u64,
+    access_reason: string,
+    access_mode: string       // "VIEW", "MODIFY", "SHARE"
+}
+
+record TradingWindowStatus {
+    company_symbol: string,
+    window_status: string,    // "OPEN", "CLOSED"
+    closure_reason: string,
+    closure_start: u64,
+    expected_opening: u64
+}
+
+// ===== MCP Interface =====
+
+@mcp
+interface UPSIDatabase {
+    config -> UPSIDatabaseConfig;
+
+    // Get UPSI record by ID from Supabase
+    query func get_upsi(
+        // UPSI record ID
+        upsi_id: string
+    ) -> result<UPSIRecord, string>;
+
+    // Get all active (non-public) UPSI for a company
+    query func get_active_upsi(
+        // Company symbol
+        company_symbol: string
+    ) -> result<list<UPSIRecord>, string>;
+
+    // Get UPSI access log for a specific UPSI
+    query func get_upsi_access_log(
+        // UPSI ID
+        upsi_id: string,
+        // Start timestamp
+        from_timestamp: u64,
+        // End timestamp
+        to_timestamp: u64
+    ) -> result<list<UPSIAccessLog>, string>;
+
+    // Get all UPSI accesses by a specific person
+    query func get_access_by_person(
+        // Entity ID of accessor
+        accessor_entity_id: string,
+        // Number of days to look back
+        days_back: u32
+    ) -> result<list<UPSIAccessLog>, string>;
+
+    // Check if an entity had UPSI access before a date
+    query func check_upsi_access_before(
+        // Entity to check
+        entity_id: string,
+        // Company symbol
+        company_symbol: string,
+        // Date to check before
+        before_timestamp: u64
+    ) -> result<list<UPSIAccessLog>, string>;
+
+    // Get trading window status for a company
+    query func get_trading_window(
+        // Company symbol
+        company_symbol: string
+    ) -> result<TradingWindowStatus, string>;
+
+    // Check if entity traded during closed window
+    query func check_window_violation(
+        // Entity ID
+        entity_id: string,
+        // Company symbol
+        company_symbol: string,
+        // Trade timestamp to check
+        trade_timestamp: u64
+    ) -> result<bool, string>;
+
+    // Get all entities who accessed a specific UPSI
+    query func get_upsi_accessors(
+        // UPSI ID
+        upsi_id: string
+    ) -> result<list<UPSIAccessLog>, string>
+}

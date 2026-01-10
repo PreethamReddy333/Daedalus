@@ -1,0 +1,23 @@
+# Risk Scoring MCP Configuration
+# ===============================
+# Fill in these values before deployment.
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+# Get this after deploying surveillance_dashboard first
+# Example: "0x1234abcd5678efgh..."
+dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+
+# Risk threshold for HIGH classification (0-100)
+# Trades scoring above this trigger elevated review
+# Recommended: 70
+high_risk_threshold: "70"
+
+# Risk threshold for CRITICAL classification (0-100)
+# Trades scoring above this trigger immediate escalation
+# Recommended: 90
+critical_risk_threshold: "90"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/risk_scoring_mcp.wasm \
+#          -p risk_scoring.widl \
+#          -c config.yaml

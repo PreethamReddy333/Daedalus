@@ -1,0 +1,18 @@
+# Slack Notifier MCP Configuration
+# =================================
+# Fill in these values before deployment.
+
+# REQUIRED: Slack Webhook URL for sending notifications
+# Get this from: Slack > Apps > Incoming Webhooks > Add New Webhook
+# Example: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+webhook_url: "<YOUR_SLACK_WEBHOOK_URL>"
+
+# REQUIRED: Default Slack channel for alerts
+# Include the # prefix
+# Example: "#surveillance-alerts"
+default_channel: "#surveillance-alerts"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/slack_notifier_mcp.wasm \
+#          -p slack_notifier.widl \
+#          -c config.yaml

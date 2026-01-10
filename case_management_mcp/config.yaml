@@ -1,0 +1,13 @@
+# Case Management MCP Configuration
+# ==================================
+# Fill in these values before deployment.
+
+# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
+# Get this after deploying surveillance_dashboard first
+# Example: "0x1234abcd5678efgh..."
+dashboard_contract_id: "aaaaaarwih72urzne2s4xksy6w27tz4xkudswscbxhd2tjjvtkfnwj257e"
+
+# Deploy command:
+#   deploy -e -f target/wasm32-unknown-unknown/release/case_management_mcp.wasm \
+#          -p case_management.widl \
+#          -c config.yaml
