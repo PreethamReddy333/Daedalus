@@ -1,0 +1,3 @@
+/Users/preetham/Documents/demoo/surveillance_dashboard/target/wasm32-unknown-unknown/release/surveillance_dashboard.wasm -p /Users/preetham/Documents/demoo/surveillance_dashboard/surveillance_dashboard.widl
+
+{"batch_author":"p-gas1m-0.asia-south1.main.weilliptic.net-8000","batch_id":"78c9fd6b3c7fb8a4dcfcc021815a9c4a407a2e8c6c94a6a8c740a6709e9c16ad","block_height":692219,"contract_address":"aaaaaarwih72urzne2s4xksy6w27tz4xkudswscbxhd2tjjvtkfnwj257e","creation_time":"2026-01-10T14:46:13Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaarba32ksu6g6env7jjpogih64kudjpyzxsrbhpfj6y6y3fez2vmmi"}

@@ -1,0 +1,130 @@
+// Surveillance Dashboard - Central state store for all surveillance workflows
+// This is a REGULAR APPLET (not MCP) - it's called by other MCPs via cross-contract
+// The frontend UI queries this applet directly
+
+// ===== Data Structures =====
+
+record Alert {
+    id: string,
+    alert_type: string,       // "INSIDER", "SPOOFING", "WASH_TRADE", "PUMP_DUMP", "FRONT_RUN"
+    severity: string,         // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+    risk_score: u32,
+    entity_id: string,
+    symbol: string,
+    description: string,
+    workflow_id: string,
+    timestamp: u64
+}
+
+record WorkflowExecution {
+    id: string,
+    workflow_type: string,    // "INSIDER_DETECTION", "MANIPULATION_CHECK", "KYC_ONBOARD"
+    trigger: string,
+    steps_completed: u32,
+    total_steps: u32,
+    status: string,           // "RUNNING", "COMPLETED", "FAILED"
+    started_at: u64,
+    completed_at: u64,
+    result_summary: string
+}
+
+record CaseRecord {
+    case_id: string,
+    case_type: string,        // "INSIDER_TRADING", "SPOOFING", "WASH_TRADING"
+    status: string,           // "OPEN", "INVESTIGATING", "ESCALATED", "CLOSED"
+    priority: string,         // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+    subject_entity: string,
+    symbol: string,
+    risk_score: u32,
+    assigned_to: string,
+    created_at: u64,
+    updated_at: u64,
+    summary: string
+}
+
+record SurveillanceStats {
+    total_alerts_today: u32,
+    total_workflows_today: u32,
+    open_cases: u32,
+    high_risk_entities: u32,
+    compliance_score: u32
+}
+
+record RiskEntity {
+    entity_id: string,
+    entity_name: string,
+    risk_score: u32,
+    alert_count: u32,
+    last_alert_at: u64
+}
+
+// ===== Regular Applet Interface (NOT MCP) =====
+// Other MCPs call these via cross-contract calls
+// Frontend UI calls query functions directly
+
+interface SurveillanceDashboard {
+    // ===== MUTATE: Called by other MCPs via cross-contract =====
+    
+    // Push a new alert from Risk Scoring or Anomaly Detection MCP
+    mutate func push_alert(alert: Alert) -> result<string, string>;
+    
+    // Log workflow start - called by first MCP in workflow
+    mutate func log_workflow_start(
+        workflow_id: string,
+        workflow_type: string,
+        trigger: string,
+        total_steps: u32
+    ) -> result<string, string>;
+    
+    // Update workflow progress - called as workflow progresses
+    mutate func update_workflow_progress(
+        workflow_id: string,
+        steps_completed: u32,
+        status: string,
+        result_summary: string
+    ) -> result<string, string>;
+    
+    // Upsert a case record - called by Case Management MCP
+    mutate func upsert_case(case_record: CaseRecord) -> result<string, string>;
+    
+    // Register a high-risk entity
+    mutate func register_risk_entity(entity: RiskEntity) -> result<string, string>;
+    
+    // ===== QUERY: Called by Frontend UI =====
+    
+    // Get live alerts with severity filter
+    query func get_live_alerts(
+        severity_filter: string,
+        limit: u32
+    ) -> result<list<Alert>, string>;
+    
+    // Get workflow execution history
+    query func get_workflow_history(
+        workflow_type: string,
+        limit: u32
+    ) -> result<list<WorkflowExecution>, string>;
+    
+    // Get cases by status
+    query func get_cases_by_status(
+        status: string,
+        limit: u32
+    ) -> result<list<CaseRecord>, string>;
+    
+    // Get surveillance statistics
+    query func get_stats() -> result<SurveillanceStats, string>;
+    
+    // Get high-risk entities
+    query func get_high_risk_entities(
+        min_risk_score: u32,
+        limit: u32
+    ) -> result<list<RiskEntity>, string>;
+    
+    // Get specific case details
+    query func get_case_details(case_id: string) -> result<CaseRecord, string>;
+    
+    // Get alerts for a specific entity
+    query func get_entity_alerts(
+        entity_id: string,
+        limit: u32
+    ) -> result<list<Alert>, string>
+}
