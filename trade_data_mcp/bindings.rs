@@ -8,8 +8,9 @@ use weil_rs::webserver::WebServer;
 
 #[derive(Debug, Serialize, Deserialize, WeilType, Default)]
 pub struct TradeDataConfig {
-    pub api_endpoint: String,
-    pub api_key: String,
+    pub api_key_1: String,
+    pub api_key_2: String,
+    pub api_key_3: String,
     pub dashboard_contract_id: String,
 }
 
@@ -63,19 +64,36 @@ pub struct AccountActivity {
     pub last_trade_time: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryHistory {
+    pub method_name: String,
+    pub symbol: String,
+    pub account_id: String,
+    pub timestamp: u64,
+    pub natural_language_prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryContext {
+    pub recent_queries: Vec<QueryHistory>,
+    pub last_symbol: String,
+    pub last_account_id: String,
+}
+
 trait TradeData {
     fn new() -> Result<Self, String>
     where
         Self: Sized;
-    async fn get_trade(&self, trade_id: String) -> Result<Trade, String>;
-    async fn get_trades_by_symbol(&self, symbol: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<Trade>, String>;
-    async fn get_trades_by_account(&self, account_id: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<Trade>, String>;
-    async fn get_trades_by_accounts(&self, account_ids: String, symbol: String, from_timestamp: u64, to_timestamp: u64) -> Result<Vec<Trade>, String>;
-    async fn analyze_volume(&self, symbol: String, from_timestamp: u64, to_timestamp: u64) -> Result<TradeAnalysis, String>;
-    async fn detect_volume_anomaly(&self, symbol: String, date_timestamp: u64) -> Result<VolumeAnomaly, String>;
-    async fn get_top_traders(&self, symbol: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<AccountActivity>, String>;
-    async fn get_large_orders(&self, min_value: u64, from_timestamp: u64, to_timestamp: u64) -> Result<Vec<Trade>, String>;
-    async fn get_account_profile(&self, account_id: String, days_back: u32) -> Result<Vec<AccountActivity>, String>;
+    async fn get_context(&mut self) -> QueryContext;
+    async fn get_trade(&mut self, trade_id: String) -> Result<Trade, String>;
+    async fn get_trades_by_symbol(&mut self, symbol: String, limit: u32) -> Result<Vec<Trade>, String>;
+    async fn get_trades_by_account(&mut self, account_id: String, limit: u32) -> Result<Vec<Trade>, String>;
+    async fn get_trades_by_accounts(&mut self, account_ids: String, symbol: String) -> Result<Vec<Trade>, String>;
+    async fn analyze_volume(&mut self, symbol: String) -> Result<TradeAnalysis, String>;
+    async fn detect_volume_anomaly(&mut self, symbol: String) -> Result<VolumeAnomaly, String>;
+    async fn get_top_traders(&mut self, symbol: String, limit: u32) -> Result<Vec<AccountActivity>, String>;
+    async fn get_large_orders(&mut self, min_value: u64) -> Result<Vec<Trade>, String>;
+    async fn get_account_profile(&mut self, account_id: String) -> Result<Vec<AccountActivity>, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
 }
@@ -97,48 +115,53 @@ impl TradeData for TradeDataContractState {
     }
 
 
-    #[query]
-    async fn get_trade(&self, trade_id: String) -> Result<Trade, String> {
+    #[mutate]
+    async fn get_context(&mut self) -> QueryContext {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_trades_by_symbol(&self, symbol: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<Trade>, String> {
+    #[mutate]
+    async fn get_trade(&mut self, trade_id: String) -> Result<Trade, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_trades_by_account(&self, account_id: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<Trade>, String> {
+    #[mutate]
+    async fn get_trades_by_symbol(&mut self, symbol: String, limit: u32) -> Result<Vec<Trade>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_trades_by_accounts(&self, account_ids: String, symbol: String, from_timestamp: u64, to_timestamp: u64) -> Result<Vec<Trade>, String> {
+    #[mutate]
+    async fn get_trades_by_account(&mut self, account_id: String, limit: u32) -> Result<Vec<Trade>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn analyze_volume(&self, symbol: String, from_timestamp: u64, to_timestamp: u64) -> Result<TradeAnalysis, String> {
+    #[mutate]
+    async fn get_trades_by_accounts(&mut self, account_ids: String, symbol: String) -> Result<Vec<Trade>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn detect_volume_anomaly(&self, symbol: String, date_timestamp: u64) -> Result<VolumeAnomaly, String> {
+    #[mutate]
+    async fn analyze_volume(&mut self, symbol: String) -> Result<TradeAnalysis, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_top_traders(&self, symbol: String, from_timestamp: u64, to_timestamp: u64, limit: u32) -> Result<Vec<AccountActivity>, String> {
+    #[mutate]
+    async fn detect_volume_anomaly(&mut self, symbol: String) -> Result<VolumeAnomaly, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_large_orders(&self, min_value: u64, from_timestamp: u64, to_timestamp: u64) -> Result<Vec<Trade>, String> {
+    #[mutate]
+    async fn get_top_traders(&mut self, symbol: String, limit: u32) -> Result<Vec<AccountActivity>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_account_profile(&self, account_id: String, days_back: u32) -> Result<Vec<AccountActivity>, String> {
+    #[mutate]
+    async fn get_large_orders(&mut self, min_value: u64) -> Result<Vec<Trade>, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn get_account_profile(&mut self, account_id: String) -> Result<Vec<AccountActivity>, String> {
         unimplemented!();
     }
 
@@ -146,6 +169,18 @@ impl TradeData for TradeDataContractState {
     #[query]
     fn tools(&self) -> String {
         r#"[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_context",
+      "description": "CALL THIS FIRST - Get context from recent queries\nReturns cached symbols and account_ids for fuzzy resolution\n",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
   {
     "type": "function",
     "function": {
@@ -169,31 +204,21 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_trades_by_symbol",
-      "description": "Fetch trades for a symbol within a date range\nReturns trades sorted by timestamp descending\n",
+      "description": "Fetch trades for a symbol\nTimestamps are optional - defaults to current day\n",
       "parameters": {
         "type": "object",
         "properties": {
           "symbol": {
             "type": "string",
-            "description": "Stock symbol (e.g., \"TATASTEEL\", \"RELIANCE\")\n"
-          },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp in milliseconds\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp in milliseconds\n"
+            "description": "Stock symbol (e.g., \"IBM\", \"AAPL\") - supports fuzzy matching\n"
           },
           "limit": {
             "type": "integer",
-            "description": "Maximum number of trades to return\n"
+            "description": "Max trades to return (default: 10)\n"
           }
         },
         "required": [
           "symbol",
-          "from_timestamp",
-          "to_timestamp",
           "limit"
         ]
       }
@@ -203,31 +228,21 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_trades_by_account",
-      "description": "Fetch trades for a specific account\nUsed for tracking individual trader activity\n",
+      "description": "Fetch trades for a specific account\n",
       "parameters": {
         "type": "object",
         "properties": {
           "account_id": {
             "type": "string",
-            "description": "Trading account ID\n"
-          },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp in milliseconds\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp in milliseconds\n"
+            "description": "Trading account ID - supports fuzzy matching\n"
           },
           "limit": {
             "type": "integer",
-            "description": "Maximum number of trades to return\n"
+            "description": "Max trades to return (default: 10)\n"
           }
         },
         "required": [
           "account_id",
-          "from_timestamp",
-          "to_timestamp",
           "limit"
         ]
       }
@@ -237,7 +252,7 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_trades_by_accounts",
-      "description": "Get trades by multiple accounts (for entity relationship checks)\nUsed to find trades by connected entities\n",
+      "description": "Get trades by multiple accounts\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -248,21 +263,11 @@ impl TradeData for TradeDataContractState {
           "symbol": {
             "type": "string",
             "description": "Stock symbol to filter by\n"
-          },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp in milliseconds\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp in milliseconds\n"
           }
         },
         "required": [
           "account_ids",
-          "symbol",
-          "from_timestamp",
-          "to_timestamp"
+          "symbol"
         ]
       }
     }
@@ -271,27 +276,17 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "analyze_volume",
-      "description": "Analyze volume for a symbol\nReturns aggregated volume statistics\n",
+      "description": "Analyze volume for a symbol\n",
       "parameters": {
         "type": "object",
         "properties": {
           "symbol": {
             "type": "string",
-            "description": "Stock symbol\n"
-          },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp\n"
+            "description": "Stock symbol - supports fuzzy matching\n"
           }
         },
         "required": [
-          "symbol",
-          "from_timestamp",
-          "to_timestamp"
+          "symbol"
         ]
       }
     }
@@ -300,22 +295,17 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "detect_volume_anomaly",
-      "description": "Detect volume anomalies\nCompares current volume against 30-day average\n",
+      "description": "Detect volume anomalies\n",
       "parameters": {
         "type": "object",
         "properties": {
           "symbol": {
             "type": "string",
-            "description": "Stock symbol\n"
-          },
-          "date_timestamp": {
-            "type": "integer",
-            "description": "Current day timestamp\n"
+            "description": "Stock symbol - supports fuzzy matching\n"
           }
         },
         "required": [
-          "symbol",
-          "date_timestamp"
+          "symbol"
         ]
       }
     }
@@ -324,7 +314,7 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_top_traders",
-      "description": "Get top traders for a symbol (for concentration analysis)\nReturns accounts with highest trading volume\n",
+      "description": "Get top traders for a symbol\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -332,23 +322,13 @@ impl TradeData for TradeDataContractState {
             "type": "string",
             "description": "Stock symbol\n"
           },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp\n"
-          },
           "limit": {
             "type": "integer",
-            "description": "Number of top traders to return\n"
+            "description": "Number of top traders to return (default: 5)\n"
           }
         },
         "required": [
           "symbol",
-          "from_timestamp",
-          "to_timestamp",
           "limit"
         ]
       }
@@ -358,27 +338,17 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_large_orders",
-      "description": "Fetch large institutional orders\nUsed for front-running detection\n",
+      "description": "Fetch large institutional orders\n",
       "parameters": {
         "type": "object",
         "properties": {
           "min_value": {
             "type": "integer",
-            "description": "Minimum order value in rupees\n"
-          },
-          "from_timestamp": {
-            "type": "integer",
-            "description": "Start timestamp\n"
-          },
-          "to_timestamp": {
-            "type": "integer",
-            "description": "End timestamp\n"
+            "description": "Minimum order value\n"
           }
         },
         "required": [
-          "min_value",
-          "from_timestamp",
-          "to_timestamp"
+          "min_value"
         ]
       }
     }
@@ -387,22 +357,17 @@ impl TradeData for TradeDataContractState {
     "type": "function",
     "function": {
       "name": "get_account_profile",
-      "description": "Get trading activity for an account across all symbols\nUsed for account profiling\n",
+      "description": "Get trading activity for an account\n",
       "parameters": {
         "type": "object",
         "properties": {
           "account_id": {
             "type": "string",
-            "description": "Trading account ID\n"
-          },
-          "days_back": {
-            "type": "integer",
-            "description": "Number of days to analyze\n"
+            "description": "Trading account ID - supports fuzzy matching\n"
           }
         },
         "required": [
-          "account_id",
-          "days_back"
+          "account_id"
         ]
       }
     }

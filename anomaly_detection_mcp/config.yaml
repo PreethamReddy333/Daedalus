@@ -3,17 +3,17 @@
 # Uses Alpha Vantage and TAAPI.IO for market data analysis
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
 
 # REQUIRED: Alpha Vantage API Key
 # Get free key: https://www.alphavantage.co/support/#api-key
-alpha_vantage_key: "<YOUR_ALPHA_VANTAGE_KEY>"
+alpha_vantage_key: "1WC77J5TMYH2D814"
 
 # REQUIRED: TAAPI.IO API Secret
 # Get free key: https://taapi.io/
-taapi_secret: "<YOUR_TAAPI_SECRET>"
+taapi_secret: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbHVlIjoiNjk2M2NlOTdhZWVjODgxNjBhM2NiZjcwIiwiaWF0IjoxNzY4MTQ4Njg4LCJleHAiOjMzMjcyNjEyNjg4fQ.c8s7qndwzTK7lnMNpsGtoFLWX6VejLuBFlr1w1YNz9o"
 
-# Deploy command:
+# Deploy command: hello
 #   deploy -e -f target/wasm32-unknown-unknown/release/anomaly_detection_mcp.wasm \
 #          -p anomaly_detection.widl \
 #          -c config.yaml

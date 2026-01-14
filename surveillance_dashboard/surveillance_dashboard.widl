@@ -2,6 +2,11 @@
 // This is a REGULAR APPLET (not MCP) - it's called by other MCPs via cross-contract
 // The frontend UI queries this applet directly
 
+// ===== Config (required for load_assets) =====
+record DashboardConfig {
+    name: string
+}
+
 // ===== Data Structures =====
 
 record Alert {
@@ -62,7 +67,10 @@ record RiskEntity {
 // Other MCPs call these via cross-contract calls
 // Frontend UI calls query functions directly
 
+@webserver
 interface SurveillanceDashboard {
+    config -> DashboardConfig;
+    
     // ===== MUTATE: Called by other MCPs via cross-contract =====
     
     // Push a new alert from Risk Scoring or Anomaly Detection MCP

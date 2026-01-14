@@ -1,3 +1,5 @@
-/Users/preetham/Documents/demoo/surveillance_dashboard/target/wasm32-unknown-unknown/release/surveillance_dashboard.wasm -p /Users/preetham/Documents/demoo/surveillance_dashboard/surveillance_dashboard.widl
+deploy -e -f /Users/preetham/Documents/demoo/surveillance_dashboard/target/wasm32-unknown-unknown/release/surveillance_dashboard.wasm -p /Users/preetham/Documents/demoo/surveillance_dashboard/surveillance_dashboard.widl
 
-{"batch_author":"p-gas1m-0.asia-south1.main.weilliptic.net-8000","batch_id":"78c9fd6b3c7fb8a4dcfcc021815a9c4a407a2e8c6c94a6a8c740a6709e9c16ad","block_height":692219,"contract_address":"aaaaaarwih72urzne2s4xksy6w27tz4xkudswscbxhd2tjjvtkfnwj257e","creation_time":"2026-01-10T14:46:13Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaarba32ksu6g6env7jjpogih64kudjpyzxsrbhpfj6y6y3fez2vmmi"}
+{"batch_author":"p-guw1m-1.us-west1.main.weilliptic.net-8000","batch_id":"a699e620ccba321ac40bca419da16c671283998a5412c44272cc9caccf82281c","block_height":860892,"contract_address":"aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga","creation_time":"2026-01-14T06:50:10Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaaznfccbpbbhyon46uapni4unh3ba7xf2yjlm24d6d4ato7rcrzndm"}
+
+load_assets -c aaaaaa74r7skiv2mhyru63tmeclc7rx5ezju4vhcvgz3dhcodxle2vwldu -n surveillance_dashboard -d /Users/preetham/Documents/demoo/surveillance_dashboard/dashboard_ui

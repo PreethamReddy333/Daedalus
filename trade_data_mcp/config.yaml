@@ -1,22 +1,16 @@
 # Trade Data MCP Configuration
 # =============================
-# Fill in these values before deployment.
+# For hackathon demo: Using Alpha Vantage with global stocks (IBM, AAPL, MSFT, etc.)
+# This demonstrates surveillance capabilities - in production would use NSE/BSE data
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-# Get this after deploying surveillance_dashboard first
-# Example: "0x1234abcd5678efgh..."
-dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
 
-# REQUIRED: API endpoint for trade data
-# Options:
-#   - NSE API: "https://www.nseindia.com/api"
-#   - Zerodha Kite: "https://api.kite.trade"
-#   - Custom/Mock: "https://your-trade-api.com"
-api_endpoint: "<YOUR_TRADE_DATA_API_ENDPOINT>"
-
-# REQUIRED: API key for authentication
-# Get this from your data provider (NSE, Zerodha, etc.)
-api_key: "<YOUR_API_KEY>"
+# Alpha Vantage API Keys (get free key from https://www.alphavantage.co/support/#api-key)
+# Multiple keys help avoid rate limits (25 requests/day per key on free tier)
+api_key_1: "41Y3AB0C0VR0PRQ9"
+api_key_2: "JP1ROGV2X8FDNJS2"
+api_key_3: "2D4YQP3HJ6YY79OL"
 
 # Deploy command:
 #   deploy -e -f target/wasm32-unknown-unknown/release/trade_data_mcp.wasm \

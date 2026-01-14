@@ -1,0 +1,148 @@
+-e -f /Users/preetham/documents/demoo/jira_mcp/target/wasm32-unknown-unknown/release/jira_mcp.wasm -p /Users/preetham/documents/demoo/jira_mcp/jira_mcp.widl -c /Users/preetham/documents/demoo/jira_mcp/config.yaml
+
+deploy -e -f /Users/preetham/Documents/demoo/jira_mcp1/target/wasm32-unknown-unknown/release/jira_mcp1.wasm -p /Users/preetham/Documents/demoo/jira_mcp1/jira_mcp.widl -c /Users/preetham/Documents/demoo/jira_mcp/config.yaml
+{"batch_author":"p-guw1m-4.us-west1.main.weilliptic.net-8000","batch_id":"5d06c4e48f6d3efaae02d968a5f9373609658247a50bd540590d814f549efa9f","block_height":208698,"contract_address":"aaaaaa3lfggy3uh7ez5wsocfavrphq2frrd4nhzppujjapiirpp6yyxbiu","creation_time":"2026-01-13T12:42:06Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa6wvym3dovg76om3hj3s6v3qfy3vatslwjsbsugpksok5saw55boq"}
+
+
+    #[query]
+    fn tools(&self) -> String {
+        r#"[
+  {
+    "type": "function",
+    "function": {
+      "name": "create_ticket",
+      "description": "Create a new Jira ticket. Defaults: priority=Medium, type=Task\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string",
+            "description": "Ticket title/summary (required)\n"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional ticket description\n"
+          },
+          "priority": {
+            "type": "string",
+            "description": "Optional priority level: High, Medium, Low\n"
+          },
+          "issue_type": {
+            "type": "string",
+            "description": "Optional issue type: Task, Bug, Story\n"
+          }
+        },
+        "required": [
+          "summary"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "create_case_ticket",
+      "description": "Create a Jira ticket for a surveillance case investigation\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "description": "Case ID from case management system\n"
+          },
+          "subject_entity": {
+            "type": "string",
+            "description": "Entity under investigation\n"
+          },
+          "case_summary": {
+            "type": "string",
+            "description": "Brief summary of the case\n"
+          },
+          "priority": {
+            "type": "string",
+            "description": "Optional priority\n"
+          }
+        },
+        "required": [
+          "case_id",
+          "subject_entity",
+          "case_summary"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "close_ticket",
+      "description": "Close a Jira ticket with resolution\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ticket_key": {
+            "type": "string",
+            "description": "Jira ticket key (e.g., WEIL-123)\n"
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Optional resolution note (default: Done)\n"
+          }
+        },
+        "required": [
+          "ticket_key"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_ticket",
+      "description": "Get ticket details by key\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ticket_key": {
+            "type": "string",
+            "description": "Jira ticket key (e.g., WEIL-123)\n"
+          }
+        },
+        "required": [
+          "ticket_key"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "update_ticket_status",
+      "description": "Update the status of a Jira ticket\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ticket_key": {
+            "type": "string",
+            "description": "Jira ticket key\n"
+          },
+          "new_status": {
+            "type": "string",
+            "description": "New status: To Do, In Progress, Done\n"
+          }
+        },
+        "required": [
+          "ticket_key",
+          "new_status"
+        ]
+      }
+    }
+  }
+]"#.to_string()
+    }
+
+    #[query]
+    fn prompts(&self) -> String {
+        r#"{
+  "prompts": []
+}"#.to_string()
+    }

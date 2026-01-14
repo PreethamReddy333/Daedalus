@@ -1,0 +1,9 @@
+# Jira MCP Configuration
+# For Jira Cloud: https://your-domain.atlassian.net
+# Generate API token from: https://id.atlassian.com/manage-profile/security/api-tokens
+
+jira_url: "https://preetham9070.atlassian.net"
+jira_email: "preetham9070@gmail.com"
+jira_api_token: "ATATT3xFfGF02OFe5gyjCmYCzcq8L1Oa2-ODWS9E7Qr4GgKVM-0qKvE6NYFUEgxALb58d6aY28TINemMcYXYTSAPYHn-1s3ygbR4RwXEj7_fkgHa7US01zN9Xe76J1V_Nn411wVy56mOCfGytWmiy-PZ4KwMPgiCZ9v_NVzDyCRFwP2eCqyK-y8=886D5729"
+project_key: "WIEL"
+default_issue_type: "Task"

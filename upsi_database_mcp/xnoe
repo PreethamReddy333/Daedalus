@@ -1,0 +1,3 @@
+deploy -e -f /Users/preetham/Documents/demoo/upsi_database_mcp/target/wasm32-unknown-unknown/release/upsi_database_mcp.wasm -p /Users/preetham/Documents/demoo/upsi_database_mcp/upsi_database.widl -c /Users/preetham/Documents/demoo/upsi_database_mcp/config.yaml
+
+{"batch_author":"p-guw1m-3.us-west1.main.weilliptic.net-8000","batch_id":"dfcbc885c5a360363389710012e75f4dea6b3aae723bda1798a8dd880b056dee","block_height":298699,"contract_address":"aaaaaaytejhz4sy6rhqobwg2sqvloy5276ouvo6ejod2fzt4rtobggxtf4","creation_time":"2026-01-13T15:12:14Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa3ty2ueyo2mpjvh4nhbdyfpadixuc3zqcdcxiggimusqhmr3jpmwa"}

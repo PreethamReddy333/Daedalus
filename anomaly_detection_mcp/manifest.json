@@ -1,0 +1,11 @@
+{
+    "applet_manifest_version": 1,
+    "bin": "anomaly_detection_mcp.wasm",
+    "widl": "anomaly_detection.widl",
+    "config": "config.yaml",
+    "organization": "Weilliptic",
+    "author": "Weilliptic",
+    "logo": "https://raw.githubusercontent.com/weilliptic-public/mcp-logos/main/icons/anomaly.svg",
+    "description": "Anomaly Detection MCP for market surveillance and manipulation pattern detection.",
+    "outcall": true
+}

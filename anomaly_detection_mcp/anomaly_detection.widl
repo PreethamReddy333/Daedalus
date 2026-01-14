@@ -45,14 +45,33 @@ record PumpDumpIndicator {
     social_sentiment_score: i32
 }
 
+// ===== Context Cache Structures =====
+
+record QueryHistory {
+    method_name: string,
+    entity_id: string,
+    symbol: string,
+    timestamp: u64,
+    natural_language_prompt: string
+}
+
+record QueryContext {
+    recent_queries: list<QueryHistory>,
+    last_entity_id: string,
+    last_symbol: string
+}
+
 // ===== MCP Interface =====
 
 @mcp
 interface AnomalyDetection {
     config -> AnomalyDetectionConfig;
 
+    // Get context from recent queries to resolve ambiguous references
+    mutate func get_context() -> QueryContext;
+
     // Detect spoofing patterns in an order using market depth data
-    query func detect_spoofing(
+    mutate func detect_spoofing(
         // Order ID
         order_id: string,
         // Entity placing the order
@@ -76,7 +95,7 @@ interface AnomalyDetection {
     ) -> result<WashTradeIndicator, string>;
 
     // Detect Pump & Dump schemes for a symbol
-    query func detect_pump_dump(
+    mutate func detect_pump_dump(
         // Symbol to analyze
         symbol: string,
         // Time window in minutes
@@ -96,7 +115,7 @@ interface AnomalyDetection {
     ) -> result<AnomalyResult, string>;
 
     // Analyze volume anomalies using TAAPI
-    query func analyze_volume_anomaly(
+    mutate func analyze_volume_anomaly(
         // Symbol
         symbol: string,
         // Interval (1min, 5min, 15min)
@@ -104,7 +123,7 @@ interface AnomalyDetection {
     ) -> result<AnomalyResult, string>;
 
     // Calculate RSI to check overbought/oversold conditions (Alpha Vantage)
-    query func check_rsi_levels(
+    mutate func check_rsi_levels(
         // Symbol
         symbol: string
     ) -> result<string, string>;

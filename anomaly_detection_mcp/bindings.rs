@@ -52,16 +52,33 @@ pub struct PumpDumpIndicator {
     pub social_sentiment_score: i32,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryHistory {
+    pub method_name: String,
+    pub entity_id: String,
+    pub symbol: String,
+    pub timestamp: u64,
+    pub natural_language_prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryContext {
+    pub recent_queries: Vec<QueryHistory>,
+    pub last_entity_id: String,
+    pub last_symbol: String,
+}
+
 trait AnomalyDetection {
     fn new() -> Result<Self, String>
     where
         Self: Sized;
-    async fn detect_spoofing(&self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String>;
+    async fn get_context(&mut self) -> QueryContext;
+    async fn detect_spoofing(&mut self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String>;
     async fn detect_wash_trading(&self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String>;
-    async fn detect_pump_dump(&self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator, String>;
+    async fn detect_pump_dump(&mut self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator, String>;
     async fn detect_front_running(&self, entity_id: String, symbol: String, client_trade_timestamp: u64, prop_trade_timestamp: u64) -> Result<AnomalyResult, String>;
-    async fn analyze_volume_anomaly(&self, symbol: String, interval: String) -> Result<AnomalyResult, String>;
-    async fn check_rsi_levels(&self, symbol: String) -> Result<String, String>;
+    async fn analyze_volume_anomaly(&mut self, symbol: String, interval: String) -> Result<AnomalyResult, String>;
+    async fn check_rsi_levels(&mut self, symbol: String) -> Result<String, String>;
     async fn scan_entity_anomalies(&self, entity_id: String) -> Result<Vec<AnomalyResult>, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
@@ -84,8 +101,13 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     }
 
 
-    #[query]
-    async fn detect_spoofing(&self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String> {
+    #[mutate]
+    async fn get_context(&mut self) -> QueryContext {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn detect_spoofing(&mut self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String> {
         unimplemented!();
     }
 
@@ -94,8 +116,8 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         unimplemented!();
     }
 
-    #[query]
-    async fn detect_pump_dump(&self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator, String> {
+    #[mutate]
+    async fn detect_pump_dump(&mut self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator, String> {
         unimplemented!();
     }
 
@@ -104,13 +126,13 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         unimplemented!();
     }
 
-    #[query]
-    async fn analyze_volume_anomaly(&self, symbol: String, interval: String) -> Result<AnomalyResult, String> {
+    #[mutate]
+    async fn analyze_volume_anomaly(&mut self, symbol: String, interval: String) -> Result<AnomalyResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn check_rsi_levels(&self, symbol: String) -> Result<String, String> {
+    #[mutate]
+    async fn check_rsi_levels(&mut self, symbol: String) -> Result<String, String> {
         unimplemented!();
     }
 
@@ -123,6 +145,18 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     #[query]
     fn tools(&self) -> String {
         r#"[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_context",
+      "description": "Get context from recent queries to resolve ambiguous references\n",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
   {
     "type": "function",
     "function": {

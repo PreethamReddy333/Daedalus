@@ -1,0 +1,5 @@
+deploy -e -f /Users/preetham/Documents/demoo/entity_relationship_mcp/target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm -p /Users/preetham/Documents/demoo/entity_relationship_mcp/entity_relationship.widl -c /Users/preetham/Documents/demoo/entity_relationship_mcp/config.yaml
+
+{"batch_author":"p-guw1m-1.us-west1.main.weilliptic.net-8000","batch_id":"6feb9fa09a3b796ea8dc550d7df0a01d69d10a916a83922fc8317856bf49105a","block_height":324160,"contract_address":"aaaaaa5nb5t5cgg7nrintzf56dpmb3otezf3hycr47mbwocei5zwm5h4gm","creation_time":"2026-01-13T15:54:42Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa3ng2w7vbhvdurmsamhqybqezr2gvjzvaycr4llngu7cdmgf42lre"}
+
+upgrade -u aaaaaa2os3frvlv3f6p6v3bdlv5ziarukn7n7ghwbttm266ji4mwnjvviu -f /Users/preetham/Documents/demoo/entity_relationship_mcp/target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm -p /Users/preetham/Documents/demoo/entity_relationship_mcp/entity_relationship.widl -c /Users/preetham/Documents/demoo/entity_relationship_mcp/config.yaml

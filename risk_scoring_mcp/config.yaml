@@ -5,7 +5,7 @@
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
 # Get this after deploying surveillance_dashboard first
 # Example: "0x1234abcd5678efgh..."
-dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
 
 # Risk threshold for HIGH classification (0-100)
 # Trades scoring above this trigger elevated review

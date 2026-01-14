@@ -1,13 +1,2 @@
 # Surveillance Dashboard Configuration
-# =====================================
-# This applet has NO external config required.
-# It stores state on-chain and is called by other MCPs.
-#
-# Deploy this FIRST to get the contract ID, then use that ID
-# in all other MCP config files for dashboard_contract_id.
-#
-# Deploy command:
-#   deploy -f target/wasm32-unknown-unknown/release/surveillance_dashboard.wasm \
-#          -p surveillance_dashboard.widl
-
-# No configuration fields required
+name: surveillance_dashboard

@@ -9,8 +9,13 @@ use weil_rs::webserver::WebServer;
 #[derive(Debug, Serialize, Deserialize, WeilType, Default)]
 pub struct RegulatoryReportsConfig {
     pub dashboard_contract_id: String,
-    pub case_management_contract_id: String,
-    pub report_storage_path: String,
+    pub jira_contract_id: String,
+    pub risk_scoring_contract_id: String,
+    pub anomaly_detection_contract_id: String,
+    pub entity_relationship_contract_id: String,
+    pub supabase_url: String,
+    pub supabase_api_key: String,
+    pub supabase_storage_bucket: String,
     pub sebi_api_endpoint: String,
 }
 
@@ -26,6 +31,7 @@ pub struct STRReport {
     pub suspicion_reason: String,
     pub investigation_summary: String,
     pub recommendation: String,
+    pub risk_score: u32,
     pub generated_at: u64,
 }
 
@@ -54,31 +60,57 @@ pub struct ComplianceScorecard {
     pub surveillance_compliance: u32,
     pub reporting_compliance: u32,
     pub violations_count: u32,
+    pub risk_score: u32,
     pub last_updated: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ReportGenerationResult {
+pub struct ReportResult {
     pub report_id: String,
     pub report_type: String,
-    pub file_path: String,
-    pub generated_at: u64,
+    pub storage_path: String,
+    pub download_url: String,
+    pub expires_at: u64,
+    pub risk_score: u32,
     pub success: bool,
     pub error: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryHistory {
+    pub method_name: String,
+    pub entity_id: String,
+    pub company_symbol: String,
+    pub case_id: String,
+    pub report_id: String,
+    pub timestamp: u64,
+    pub natural_language_prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryContext {
+    pub recent_queries: Vec<QueryHistory>,
+    pub last_entity_id: String,
+    pub last_company_symbol: String,
+    pub last_case_id: String,
+    pub last_report_id: String,
 }
 
 trait RegulatoryReports {
     fn new() -> Result<Self, String>
     where
         Self: Sized;
-    async fn generate_str(&self, case_id: String, entity_id: String, suspicious_activity_type: String, transaction_details: String, total_value: String, suspicion_reason: String) -> Result<STRReport, String>;
-    async fn generate_surveillance_report(&self, from_date: String, to_date: String, report_type: String) -> Result<MarketSurveillanceReport, String>;
-    async fn generate_compliance_scorecard(&self, entity_id: String, period: String, year: u32) -> Result<ComplianceScorecard, String>;
-    async fn generate_gsm_report(&self, report_date: String) -> Result<ReportGenerationResult, String>;
-    async fn generate_esm_report(&self, report_date: String) -> Result<ReportGenerationResult, String>;
-    async fn get_pending_strs(&self, limit: u32) -> Result<Vec<STRReport>, String>;
-    async fn submit_str(&self, str_id: String) -> Result<ReportGenerationResult, String>;
-    async fn generate_investigation_report(&self, case_id: String, include_evidence: bool) -> Result<ReportGenerationResult, String>;
+    async fn get_context(&mut self) -> QueryContext;
+    async fn generate_str(&mut self, case_id: String, entity_id: String, suspicious_activity_type: String, suspicion_reason: String) -> Result<ReportResult, String>;
+    async fn generate_surveillance_report(&mut self, from_date: String, to_date: String, report_type: String) -> Result<ReportResult, String>;
+    async fn generate_compliance_scorecard(&mut self, entity_id: String, period: String) -> Result<ReportResult, String>;
+    async fn generate_entity_risk_report(&mut self, entity_id: String) -> Result<ReportResult, String>;
+    async fn generate_gsm_report(&mut self, report_date: String) -> Result<ReportResult, String>;
+    async fn generate_esm_report(&mut self, report_date: String) -> Result<ReportResult, String>;
+    async fn get_pending_strs(&mut self, limit: u32) -> Result<Vec<STRReport>, String>;
+    async fn submit_str(&mut self, str_id: String) -> Result<ReportResult, String>;
+    async fn generate_investigation_report(&mut self, case_id: String, include_evidence: bool) -> Result<ReportResult, String>;
+    async fn get_report_url(&mut self, report_id: String) -> Result<ReportResult, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
 }
@@ -100,43 +132,58 @@ impl RegulatoryReports for RegulatoryReportsContractState {
     }
 
 
-    #[query]
-    async fn generate_str(&self, case_id: String, entity_id: String, suspicious_activity_type: String, transaction_details: String, total_value: String, suspicion_reason: String) -> Result<STRReport, String> {
+    #[mutate]
+    async fn get_context(&mut self) -> QueryContext {
         unimplemented!();
     }
 
-    #[query]
-    async fn generate_surveillance_report(&self, from_date: String, to_date: String, report_type: String) -> Result<MarketSurveillanceReport, String> {
+    #[mutate]
+    async fn generate_str(&mut self, case_id: String, entity_id: String, suspicious_activity_type: String, suspicion_reason: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn generate_compliance_scorecard(&self, entity_id: String, period: String, year: u32) -> Result<ComplianceScorecard, String> {
+    #[mutate]
+    async fn generate_surveillance_report(&mut self, from_date: String, to_date: String, report_type: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn generate_gsm_report(&self, report_date: String) -> Result<ReportGenerationResult, String> {
+    #[mutate]
+    async fn generate_compliance_scorecard(&mut self, entity_id: String, period: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn generate_esm_report(&self, report_date: String) -> Result<ReportGenerationResult, String> {
+    #[mutate]
+    async fn generate_entity_risk_report(&mut self, entity_id: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_pending_strs(&self, limit: u32) -> Result<Vec<STRReport>, String> {
+    #[mutate]
+    async fn generate_gsm_report(&mut self, report_date: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn submit_str(&self, str_id: String) -> Result<ReportGenerationResult, String> {
+    #[mutate]
+    async fn generate_esm_report(&mut self, report_date: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn generate_investigation_report(&self, case_id: String, include_evidence: bool) -> Result<ReportGenerationResult, String> {
+    #[mutate]
+    async fn get_pending_strs(&mut self, limit: u32) -> Result<Vec<STRReport>, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn submit_str(&mut self, str_id: String) -> Result<ReportResult, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn generate_investigation_report(&mut self, case_id: String, include_evidence: bool) -> Result<ReportResult, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn get_report_url(&mut self, report_id: String) -> Result<ReportResult, String> {
         unimplemented!();
     }
 
@@ -147,8 +194,20 @@ impl RegulatoryReports for RegulatoryReportsContractState {
   {
     "type": "function",
     "function": {
+      "name": "get_context",
+      "description": "CALL THIS FIRST - Get context from recent queries\n",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "generate_str",
-      "description": "Generate Suspicious Transaction Report\n",
+      "description": "Generate Suspicious Transaction Report and upload to Supabase Storage\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -164,14 +223,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
             "type": "string",
             "description": ""
           },
-          "transaction_details": {
-            "type": "string",
-            "description": ""
-          },
-          "total_value": {
-            "type": "string",
-            "description": ""
-          },
           "suspicion_reason": {
             "type": "string",
             "description": ""
@@ -181,8 +232,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
           "case_id",
           "entity_id",
           "suspicious_activity_type",
-          "transaction_details",
-          "total_value",
           "suspicion_reason"
         ]
       }
@@ -232,16 +281,30 @@ impl RegulatoryReports for RegulatoryReportsContractState {
           "period": {
             "type": "string",
             "description": ""
-          },
-          "year": {
-            "type": "integer",
-            "description": ""
           }
         },
         "required": [
           "entity_id",
-          "period",
-          "year"
+          "period"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "generate_entity_risk_report",
+      "description": "Generate full entity risk report\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "required": [
+          "entity_id"
         ]
       }
     }
@@ -250,7 +313,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
     "type": "function",
     "function": {
       "name": "generate_gsm_report",
-      "description": "Generate GSM (Graded Surveillance Measure) stock report\n",
+      "description": "Generate GSM (Graded Surveillance Measure) report\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -269,7 +332,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
     "type": "function",
     "function": {
       "name": "generate_esm_report",
-      "description": "Generate ESM (Enhanced Surveillance Measure) stock report\n",
+      "description": "Generate ESM (Enhanced Surveillance Measure) report\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -288,7 +351,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
     "type": "function",
     "function": {
       "name": "get_pending_strs",
-      "description": "Get list of pending STRs\n",
+      "description": "Get pending STRs awaiting submission\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -326,7 +389,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
     "type": "function",
     "function": {
       "name": "generate_investigation_report",
-      "description": "Generate ad-hoc investigation report\n",
+      "description": "Generate investigation report with evidence\n",
       "parameters": {
         "type": "object",
         "properties": {
@@ -342,6 +405,25 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         "required": [
           "case_id",
           "include_evidence"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_report_url",
+      "description": "Get download URL for a previously generated report\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "report_id": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "required": [
+          "report_id"
         ]
       }
     }

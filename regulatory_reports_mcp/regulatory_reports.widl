@@ -1,11 +1,17 @@
-// Regulatory Reports MCP - Generates compliance reports
-// Fetches data across applets (Dashboard, Case Management) to compile reports
+// Regulatory Reports MCP - Generates compliance reports and uploads to Supabase Storage
+// Implements context caching with fuzzy parameter resolution
 
 // ===== Configuration =====
 record RegulatoryReportsConfig {
     dashboard_contract_id: string,
-    case_management_contract_id: string,
-    report_storage_path: string,
+    jira_contract_id: string,
+    risk_scoring_contract_id: string,
+    anomaly_detection_contract_id: string,
+    entity_relationship_contract_id: string,
+    // Supabase Storage REST API
+    supabase_url: string,
+    supabase_service_key: string,
+    supabase_bucket: string,
     sebi_api_endpoint: string
 }
 
@@ -22,6 +28,7 @@ record STRReport {
     suspicion_reason: string,
     investigation_summary: string,
     recommendation: string,
+    risk_score: u32,
     generated_at: u64
 }
 
@@ -48,16 +55,39 @@ record ComplianceScorecard {
     surveillance_compliance: u32,
     reporting_compliance: u32,
     violations_count: u32,
+    risk_score: u32,
     last_updated: u64
 }
 
-record ReportGenerationResult {
+record ReportResult {
     report_id: string,
     report_type: string,
-    file_path: string,
-    generated_at: u64,
+    storage_path: string,
+    download_url: string,
+    expires_at: u64,
+    risk_score: u32,
     success: bool,
     error: string
+}
+
+// ===== Context Cache Structures =====
+
+record QueryHistory {
+    method_name: string,
+    entity_id: string,
+    company_symbol: string,
+    case_id: string,
+    report_id: string,
+    timestamp: u64,
+    natural_language_prompt: string
+}
+
+record QueryContext {
+    recent_queries: list<QueryHistory>,
+    last_entity_id: string,
+    last_company_symbol: string,
+    last_case_id: string,
+    last_report_id: string
 }
 
 // ===== MCP Interface =====
@@ -66,53 +96,63 @@ record ReportGenerationResult {
 interface RegulatoryReports {
     config -> RegulatoryReportsConfig;
 
-    // Generate Suspicious Transaction Report
-    query func generate_str(
+    // CALL THIS FIRST - Get context from recent queries
+    mutate func get_context() -> QueryContext;
+
+    // Generate Suspicious Transaction Report and upload to Supabase Storage
+    mutate func generate_str(
         case_id: string,
         entity_id: string,
         suspicious_activity_type: string,
-        transaction_details: string,
-        total_value: string,
         suspicion_reason: string
-    ) -> result<STRReport, string>;
+    ) -> result<ReportResult, string>;
 
     // Generate periodic market surveillance report
-    query func generate_surveillance_report(
+    mutate func generate_surveillance_report(
         from_date: string,
         to_date: string,
         report_type: string
-    ) -> result<MarketSurveillanceReport, string>;
+    ) -> result<ReportResult, string>;
 
     // Generate compliance scorecard for an entity
-    query func generate_compliance_scorecard(
+    mutate func generate_compliance_scorecard(
         entity_id: string,
-        period: string,
-        year: u32
-    ) -> result<ComplianceScorecard, string>;
+        period: string
+    ) -> result<ReportResult, string>;
 
-    // Generate GSM (Graded Surveillance Measure) stock report
-    query func generate_gsm_report(
+    // Generate full entity risk report
+    mutate func generate_entity_risk_report(
+        entity_id: string
+    ) -> result<ReportResult, string>;
+
+    // Generate GSM (Graded Surveillance Measure) report
+    mutate func generate_gsm_report(
         report_date: string
-    ) -> result<ReportGenerationResult, string>;
+    ) -> result<ReportResult, string>;
 
-    // Generate ESM (Enhanced Surveillance Measure) stock report
-    query func generate_esm_report(
+    // Generate ESM (Enhanced Surveillance Measure) report
+    mutate func generate_esm_report(
         report_date: string
-    ) -> result<ReportGenerationResult, string>;
+    ) -> result<ReportResult, string>;
 
-    // Get list of pending STRs
-    query func get_pending_strs(
+    // Get pending STRs awaiting submission
+    mutate func get_pending_strs(
         limit: u32
     ) -> result<list<STRReport>, string>;
 
     // Submit STR to regulatory authority
-    query func submit_str(
+    mutate func submit_str(
         str_id: string
-    ) -> result<ReportGenerationResult, string>;
+    ) -> result<ReportResult, string>;
 
-    // Generate ad-hoc investigation report
-    query func generate_investigation_report(
+    // Generate investigation report with evidence
+    mutate func generate_investigation_report(
         case_id: string,
         include_evidence: bool
-    ) -> result<ReportGenerationResult, string>
+    ) -> result<ReportResult, string>;
+
+    // Get download URL for a previously generated report
+    mutate func get_report_url(
+        report_id: string
+    ) -> result<ReportResult, string>
 }

@@ -1,0 +1,11 @@
+{
+    "applet_manifest_version": 1,
+    "bin": "jira_mcp.wasm",
+    "widl": "jira_mcp.widl",
+    "config": "config.yaml",
+    "organization": "Weilliptic",
+    "author": "Weilliptic",
+    "logo": "https://raw.githubusercon hi tent.com/weilliptic-public/mcp-logos/main/icons/jira.svg",
+    "description": "Jira MCP server for creating and managing tickets.",
+    "outcall": true
+}

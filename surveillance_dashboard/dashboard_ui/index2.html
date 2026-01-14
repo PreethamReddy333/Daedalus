@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surveillance Dashboard - Capital Markets (v2)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables */
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: rgba(30, 41, 59, 0.8);
+            --bg-hover: rgba(51, 65, 85, 0.8);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-orange: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --border-color: rgba(148, 163, 184, 0.1);
+            --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Dashboard Container */
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 28px;
+        }
+
+        .logo h1 {
+            font-size: 20px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot.offline {
+            background: var(--accent-red);
+        }
+
+        .dot.online {
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px 24px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .stat-icon {
+            font-size: 32px;
+            opacity: 0.9;
+        }
+
+        .stat-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-alerts .stat-value {
+            color: var(--accent-red);
+        }
+
+        .stat-cases .stat-value {
+            color: var(--accent-orange);
+        }
+
+        .stat-risk .stat-value {
+            color: var(--accent-purple);
+        }
+
+        .stat-compliance .stat-value {
+            color: var(--accent-green);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Panel */
+        .panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .filter-select {
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-purple);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Lists */
+        .alerts-list,
+        .cases-list,
+        .workflow-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s ease;
+        }
+
+        .alert-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .alert-severity {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .alert-severity.CRITICAL {
+            background: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+        }
+
+        .alert-severity.HIGH {
+            background: var(--accent-orange);
+        }
+
+        .alert-severity.MEDIUM {
+            background: var(--accent-blue);
+        }
+
+        .alert-severity.LOW {
+            background: var(--text-muted);
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .alert-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .case-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s ease;
+        }
+
+        .case-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .case-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .case-id {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .case-subject {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .case-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .case-status.OPEN {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .case-status.INVESTIGATING {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-orange);
+        }
+
+        .case-status.CLOSED {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--text-muted);
+        }
+
+        /* Risk Grid */
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .risk-entity {
+            padding: 14px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .risk-entity-name {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .risk-score-bar {
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .risk-score-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .risk-score-fill.high {
+            background: var(--accent-red);
+        }
+
+        .risk-score-fill.medium {
+            background: var(--accent-orange);
+        }
+
+        .risk-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Workflow List */
+        .workflow-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .workflow-status-icon {
+            font-size: 18px;
+        }
+
+        .workflow-content {
+            flex: 1;
+        }
+
+        .workflow-type {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .workflow-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-primary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .risk-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">⛓️</div>
+                <h1>Capital Markets Surveillance</h1>
+            </div>
+            <div class="header-actions">
+                <button id="connectWallet" class="btn btn-primary">
+                    <span class="btn-icon">🔗</span>
+                    Connect Wallet
+                </button>
+                <div class="status-indicator" id="connectionStatus">
+                    <span class="dot offline"></span>
+                    <span>Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="stats-grid">
+            <div class="stat-card stat-alerts">
+                <div class="stat-icon">🚨</div>
+                <div class="stat-content"><span class="stat-value" id="alertsToday">--</span><span
+                        class="stat-label">Alerts Today</span></div>
+            </div>
+            <div class="stat-card stat-cases">
+                <div class="stat-icon">📁</div>
+                <div class="stat-content"><span class="stat-value" id="openCases">--</span><span class="stat-label">Open
+                        Cases</span></div>
+            </div>
+            <div class="stat-card stat-risk">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-content"><span class="stat-value" id="highRiskEntities">--</span><span
+                        class="stat-label">High Risk Entities</span></div>
+            </div>
+            <div class="stat-card stat-compliance">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content"><span class="stat-value" id="complianceScore">--%</span><span
+                        class="stat-label">Compliance Score</span></div>
+            </div>
+        </section>
+
+        <main class="main-content">
+            <section class="panel alerts-panel">
+                <div class="panel-header">
+                    <h2>🔴 Live Alerts</h2><select id="severityFilter" class="filter-select">
+                        <option value="ALL">All Severities</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="LOW">Low</option>
+                    </select>
+                </div>
+                <div class="alerts-list" id="alertsList">
+                    <div class="empty-state">Connect wallet to load alerts</div>
+                </div>
+            </section>
+            <section class="panel cases-panel">
+                <div class="panel-header">
+                    <h2>📋 Investigation Cases</h2><select id="caseStatusFilter" class="filter-select">
+                        <option value="ALL">All Status</option>
+                        <option value="OPEN">Open</option>
+                        <option value="INVESTIGATING">Investigating</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                </div>
+                <div class="cases-list" id="casesList">
+                    <div class="empty-state">Connect wallet to load cases</div>
+                </div>
+            </section>
+            <section class="panel risk-panel">
+                <div class="panel-header">
+                    <h2>🎯 High-Risk Entities</h2><span class="badge">Score ≥ 70</span>
+                </div>
+                <div class="risk-grid" id="riskGrid">
+                    <div class="empty-state">Connect wallet to load risk data</div>
+                </div>
+            </section>
+            <section class="panel workflow-panel">
+                <div class="panel-header">
+                    <h2>⚡ Recent Workflows</h2>
+                </div>
+                <div class="workflow-list" id="workflowList">
+                    <div class="empty-state">Connect wallet to load workflows</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        /**
+         * Surveillance Dashboard - JavaScript
+         * Connects to WeilChain via WeilWallet and loads data from surveillance_dashboard contract
+         */
+
+        // Contract configuration
+        const CONFIG = {
+            contractAddress: 'aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga',
+        };
+
+        // State
+        let wallet = null;
+        let connected = false;
+        let elements = {};
+
+        // Initialize after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            elements = {
+                connectBtn: document.getElementById('connectWallet'),
+                connectionStatus: document.getElementById('connectionStatus'),
+                alertsToday: document.getElementById('alertsToday'),
+                openCases: document.getElementById('openCases'),
+                highRiskEntities: document.getElementById('highRiskEntities'),
+                complianceScore: document.getElementById('complianceScore'),
+                alertsList: document.getElementById('alertsList'),
+                casesList: document.getElementById('casesList'),
+                riskGrid: document.getElementById('riskGrid'),
+                workflowList: document.getElementById('workflowList'),
+                severityFilter: document.getElementById('severityFilter'),
+                caseStatusFilter: document.getElementById('caseStatusFilter'),
+            };
+
+            // Event Listeners
+            if (elements.connectBtn) {
+                elements.connectBtn.addEventListener('click', connectWallet);
+                console.log('Connect button found and listener attached');
+            } else {
+                console.error('Connect button not found!');
+            }
+
+            if (elements.severityFilter) {
+                elements.severityFilter.addEventListener('change', loadAlerts);
+            }
+            if (elements.caseStatusFilter) {
+                elements.caseStatusFilter.addEventListener('change', loadCases);
+            }
+
+            // Load demo data for preview
+            loadDemoData();
+        });
+
+        // ===== Wallet Connection =====
+        async function connectWallet() {
+            console.log('Connect wallet clicked');
+
+            if (typeof window.WeilWallet === 'undefined') {
+                alert('WeilWallet extension not found. Please install it from the Chrome Web Store.');
+                return;
+            }
+
+            try {
+                // Use correct method name from WeilWallet docs
+                const accounts = await window.WeilWallet.request({
+                    method: 'weil_requestAccounts',
+                });
+                console.log('Accounts received:', accounts);
+
+                if (accounts && accounts.length > 0) {
+                    wallet = window.WeilWallet;
+                    connected = true;
+                    updateConnectionStatus(true);
+                    loadAllData();
+                }
+            } catch (error) {
+                console.error('Failed to connect wallet:', error);
+                alert('Failed to connect to wallet: ' + error.message);
+            }
+        }
+
+        function updateConnectionStatus(isConnected) {
+            console.log('Updating connection status:', isConnected);
+            const statusEl = elements.connectionStatus;
+            if (!statusEl) {
+                console.error('Status element not found!');
+                return;
+            }
+
+            const dot = statusEl.querySelector('.dot');
+            const text = statusEl.querySelector('span:last-child');
+
+            if (isConnected) {
+                if (dot) dot.className = 'dot online';
+                if (text) text.textContent = 'Connected';
+                if (elements.connectBtn) {
+                    elements.connectBtn.textContent = '✓ Connected';
+                    elements.connectBtn.disabled = true;
+                }
+            } else {
+                if (dot) dot.className = 'dot offline';
+                if (text) text.textContent = 'Disconnected';
+            }
+        }
+
+        // ===== Data Loading =====
+        async function loadAllData() {
+            await Promise.all([
+                loadStats(),
+                loadAlerts(),
+                loadCases(),
+                loadRiskEntities(),
+                loadWorkflows(),
+            ]);
+        }
+
+        async function callContract(method, args = {}) {
+            if (!wallet) return null;
+
+            try {
+                const result = await wallet.request({
+                    method: 'weil_call',
+                    params: {
+                        to: CONFIG.contractAddress,
+                        method: method,
+                        args: JSON.stringify(args),
+                    },
+                });
+                return JSON.parse(result);
+            } catch (error) {
+                console.error(`Error calling ${method}:`, error);
+                return null;
+            }
+        }
+
+        async function loadStats() {
+            const stats = await callContract('get_stats');
+            if (stats && stats.Ok) {
+                const data = stats.Ok;
+                elements.alertsToday.textContent = data.total_alerts_today || 0;
+                elements.openCases.textContent = data.open_cases || 0;
+                elements.highRiskEntities.textContent = data.high_risk_entities || 0;
+                elements.complianceScore.textContent = (data.compliance_score || 0) + '%';
+            }
+        }
+
+        async function loadAlerts() {
+            const severity = elements.severityFilter ? elements.severityFilter.value : 'ALL';
+            const alerts = await callContract('get_live_alerts', {
+                severity_filter: severity === 'ALL' ? null : severity,
+                limit: 20,
+            });
+
+            if (alerts && alerts.Ok) {
+                renderAlerts(alerts.Ok);
+            }
+        }
+
+        async function loadCases() {
+            const status = elements.caseStatusFilter ? elements.caseStatusFilter.value : 'ALL';
+            const cases = await callContract('get_cases_by_status', {
+                status: status === 'ALL' ? null : status,
+                limit: 20,
+            });
+
+            if (cases && cases.Ok) {
+                renderCases(cases.Ok);
+            }
+        }
+
+        async function loadRiskEntities() {
+            const entities = await callContract('get_high_risk_entities', {
+                min_risk_score: 70,
+                limit: 10,
+            });
+
+            if (entities && entities.Ok) {
+                renderRiskEntities(entities.Ok);
+            }
+        }
+
+        async function loadWorkflows() {
+            const workflows = await callContract('get_workflow_history', {
+                workflow_type: null,
+                limit: 10,
+            });
+
+            if (workflows && workflows.Ok) {
+                renderWorkflows(workflows.Ok);
+            }
+        }
+
+        // ===== Rendering Functions =====
+        function renderAlerts(alerts) {
+            if (!elements.alertsList) return;
+
+            if (!alerts || alerts.length === 0) {
+                elements.alertsList.innerHTML = '<div class="empty-state">No alerts found</div>';
+                return;
+            }
+
+            elements.alertsList.innerHTML = alerts.map(alert => `
+        <div class="alert-item">
+            <div class="alert-severity ${alert.severity}"></div>
+            <div class="alert-content">
+                <div class="alert-title">${alert.alert_type}: ${alert.description}</div>
+                <div class="alert-meta">
+                    <span>📈 ${alert.symbol}</span>
+                    <span>👤 ${alert.entity_id}</span>
+                    <span>Score: ${alert.risk_score}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        function renderCases(cases) {
+            if (!elements.casesList) return;
+
+            if (!cases || cases.length === 0) {
+                elements.casesList.innerHTML = '<div class="empty-state">No cases found</div>';
+                return;
+            }
+
+            elements.casesList.innerHTML = cases.map(c => `
+        <div class="case-item">
+            <div class="case-info">
+                <div class="case-id">${c.case_id}</div>
+                <div class="case-subject">${c.subject_entity} - ${c.symbol}</div>
+            </div>
+            <span class="case-status ${c.status}">${c.status}</span>
+        </div>
+    `).join('');
+        }
+
+        function renderRiskEntities(entities) {
+            if (!elements.riskGrid) return;
+
+            if (!entities || entities.length === 0) {
+                elements.riskGrid.innerHTML = '<div class="empty-state">No high-risk entities</div>';
+                return;
+            }
+
+            elements.riskGrid.innerHTML = entities.map(entity => `
+        <div class="risk-entity">
+            <div class="risk-entity-name">${entity.entity_name}</div>
+            <div class="risk-score-bar">
+                <div class="risk-score-fill ${entity.risk_score >= 85 ? 'high' : 'medium'}" 
+                     style="width: ${entity.risk_score}%"></div>
+            </div>
+            <div class="risk-meta">
+                <span>Score: ${entity.risk_score}</span>
+                <span>Alerts: ${entity.alert_count}</span>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        function renderWorkflows(workflows) {
+            if (!elements.workflowList) return;
+
+            if (!workflows || workflows.length === 0) {
+                elements.workflowList.innerHTML = '<div class="empty-state">No workflows found</div>';
+                return;
+            }
+
+            elements.workflowList.innerHTML = workflows.map(wf => {
+                const progress = wf.total_steps > 0 ? (wf.steps_completed / wf.total_steps) * 100 : 0;
+                const icon = wf.status === 'COMPLETED' ? '✅' : wf.status === 'FAILED' ? '❌' : '⏳';
+
+                return `
+            <div class="workflow-item">
+                <div class="workflow-status-icon">${icon}</div>
+                <div class="workflow-content">
+                    <div class="workflow-type">${wf.workflow_type}</div>
+                    <div class="workflow-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <span class="progress-text">${wf.steps_completed}/${wf.total_steps}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+            }).join('');
+        }
+
+        // ===== Demo Mode =====
+        function loadDemoData() {
+            // Demo stats
+            if (elements.alertsToday) elements.alertsToday.textContent = '24';
+            if (elements.openCases) elements.openCases.textContent = '7';
+            if (elements.highRiskEntities) elements.highRiskEntities.textContent = '5';
+            if (elements.complianceScore) elements.complianceScore.textContent = '92%';
+
+            // Demo alerts
+            const demoAlerts = [
+                { severity: 'CRITICAL', alert_type: 'INSIDER_TRADING', description: 'Large trade before earnings', symbol: 'RELIANCE', entity_id: 'ENT-001', risk_score: 92 },
+                { severity: 'HIGH', alert_type: 'WASH_TRADE', description: 'Circular trading pattern detected', symbol: 'TCS', entity_id: 'ENT-002', risk_score: 78 },
+                { severity: 'MEDIUM', alert_type: 'SPOOFING', description: 'Large orders cancelled rapidly', symbol: 'INFY', entity_id: 'ENT-003', risk_score: 65 },
+            ];
+            renderAlerts(demoAlerts);
+
+            // Demo cases
+            const demoCases = [
+                { case_id: 'CASE-2026-001', subject_entity: 'Rajesh Kumar', symbol: 'RELIANCE', status: 'INVESTIGATING' },
+                { case_id: 'CASE-2026-002', subject_entity: 'Priya Sharma', symbol: 'TCS', status: 'OPEN' },
+                { case_id: 'CASE-2026-003', subject_entity: 'Amit Patel', symbol: 'HDFC', status: 'CLOSED' },
+            ];
+            renderCases(demoCases);
+
+            // Demo risk entities
+            const demoRisk = [
+                { entity_name: 'Rajesh Kumar', risk_score: 92, alert_count: 5 },
+                { entity_name: 'Priya Sharma', risk_score: 78, alert_count: 3 },
+                { entity_name: 'Amit Patel', risk_score: 71, alert_count: 2 },
+            ];
+            renderRiskEntities(demoRisk);
+
+            // Demo workflows
+            const demoWorkflows = [
+                { workflow_type: 'INSIDER_DETECTION', status: 'COMPLETED', steps_completed: 5, total_steps: 5 },
+                { workflow_type: 'KYC_ONBOARD', status: 'RUNNING', steps_completed: 3, total_steps: 6 },
+                { workflow_type: 'MANIPULATION_CHECK', status: 'FAILED', steps_completed: 2, total_steps: 4 },
+            ];
+            renderWorkflows(demoWorkflows);
+        }
+    </script>
+</body>
+
+</html>

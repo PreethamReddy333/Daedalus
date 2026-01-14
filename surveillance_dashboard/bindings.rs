@@ -6,6 +6,11 @@ use weil_rs::config::Secrets;
 use weil_rs::webserver::WebServer;
 
 
+#[derive(Debug, Serialize, Deserialize, WeilType, Default)]
+pub struct DashboardConfig {
+    pub name: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Alert {
     pub id: String,
@@ -81,11 +86,32 @@ trait SurveillanceDashboard {
     async fn get_high_risk_entities(&self, min_risk_score: u32, limit: u32) -> Result<Vec<RiskEntity>, String>;
     async fn get_case_details(&self, case_id: String) -> Result<CaseRecord, String>;
     async fn get_entity_alerts(&self, entity_id: String, limit: u32) -> Result<Vec<Alert>, String>;
+
+    // webserver specific functions
+    fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String>;
+    fn add_path_content(
+        &mut self,
+        path: String,
+        chunk: Vec<u8>,
+        index: u32,
+    ) -> Result<(), String>;
+    fn finish_upload(&mut self, path: String, size_bytes: u32) -> Result<(), String>;
+    fn total_chunks(&self, path: String) -> Result<u32, String>;
+    fn http_content(
+        &self,
+        path: String,
+        index: u32,
+        method: String,
+    ) -> (u16, std::collections::HashMap<String, String>, Vec<u8>);
+    fn size_bytes(&self, path: String) -> Result<u32, String>;
+    fn get_chunk_size(&self) -> u32;
 }
 
 #[derive(Serialize, Deserialize, WeilType)]
 pub struct SurveillanceDashboardContractState {
     // define your contract state here!
+    secrets: Secrets<DashboardConfig>,
+    server: WebServer,
 }
 
 #[smart_contract]
@@ -157,6 +183,51 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     #[query]
     async fn get_entity_alerts(&self, entity_id: String, limit: u32) -> Result<Vec<Alert>, String> {
         unimplemented!();
+    }
+
+    #[mutate]
+    fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String> {
+        self.server.start_file_upload(path, total_chunks)
+    }
+
+    #[query]
+    fn total_chunks(&self, path: String) -> Result<u32, String> {
+        self.server.total_chunks(path)
+    }
+
+    #[mutate]
+    fn add_path_content(
+        &mut self,
+        path: String,
+        chunk: Vec<u8>,
+        index: u32,
+    ) -> Result<(), String> {
+        self.server.add_path_content(path, chunk, index)
+    }
+
+    #[mutate]
+    fn finish_upload(&mut self, path: String, size_bytes: u32) -> Result<(), String> {
+        self.server.finish_upload(path, size_bytes)
+    }
+
+    #[query]
+    fn http_content(
+        &self,
+        path: String,
+        index: u32,
+        method: String,
+    ) -> (u16, std::collections::HashMap<String, String>, Vec<u8>) {
+        self.server.http_content(path, index, method)
+    }
+
+    #[query]
+    fn size_bytes(&self, path: String) -> Result<u32, String> {
+        self.server.size_bytes(path)
+    }
+
+    #[query]
+    fn get_chunk_size(&self) -> u32 {
+        self.server.get_chunk_size()
     }
 }
 

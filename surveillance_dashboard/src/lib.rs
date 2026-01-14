@@ -13,6 +13,15 @@ use serde::{Deserialize, Serialize};
 use weil_macros::{constructor, mutate, query, smart_contract, WeilType};
 use weil_rs::collections::vec::WeilVec;
 use weil_rs::collections::WeilId;
+use weil_rs::config::Secrets;
+use weil_rs::webserver::WebServer;
+
+// ===== CONFIG =====
+
+#[derive(Debug, Serialize, Deserialize, WeilType, Default, Clone)]
+pub struct DashboardConfig {
+    pub name: String,
+}
 
 // ===== DATA STRUCTURES =====
 
@@ -84,15 +93,24 @@ trait SurveillanceDashboard {
     async fn update_workflow_progress(&mut self, workflow_id: String, steps_completed: u32, status: String, result_summary: String) -> Result<String, String>;
     async fn upsert_case(&mut self, case_record: CaseRecord) -> Result<String, String>;
     async fn register_risk_entity(&mut self, entity: RiskEntity) -> Result<String, String>;
-    async fn get_live_alerts(&self, severity_filter: String, limit: u32) -> Result<Vec<Alert>, String>;
-    async fn get_workflow_history(&self, workflow_type: String, limit: u32) -> Result<Vec<WorkflowExecution>, String>;
-    async fn get_cases_by_status(&self, status: String, limit: u32) -> Result<Vec<CaseRecord>, String>;
+    async fn get_live_alerts(&self, severity_filter: Option<String>, limit: Option<u32>) -> Result<Vec<Alert>, String>;
+    async fn get_workflow_history(&self, workflow_type: Option<String>, limit: Option<u32>) -> Result<Vec<WorkflowExecution>, String>;
+    async fn get_cases_by_status(&self, status: Option<String>, limit: Option<u32>) -> Result<Vec<CaseRecord>, String>;
     async fn get_stats(&self) -> Result<SurveillanceStats, String>;
-    async fn get_high_risk_entities(&self, min_risk_score: u32, limit: u32) -> Result<Vec<RiskEntity>, String>;
+    async fn get_high_risk_entities(&self, min_risk_score: Option<u32>, limit: Option<u32>) -> Result<Vec<RiskEntity>, String>;
     async fn get_case_details(&self, case_id: String) -> Result<CaseRecord, String>;
-    async fn get_entity_alerts(&self, entity_id: String, limit: u32) -> Result<Vec<Alert>, String>;
+    async fn get_entity_alerts(&self, entity_id: String, limit: Option<u32>) -> Result<Vec<Alert>, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
+    
+    // Webserver methods for static asset hosting
+    fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String>;
+    fn add_path_content(&mut self, path: String, chunk: Vec<u8>, index: u32) -> Result<(), String>;
+    fn finish_upload(&mut self, path: String, size_bytes: u32) -> Result<(), String>;
+    fn total_chunks(&self, path: String) -> Result<u32, String>;
+    fn http_content(&self, path: String, index: u32, method: String) -> (u16, std::collections::HashMap<String, String>, Vec<u8>);
+    fn size_bytes(&self, path: String) -> Result<u32, String>;
+    fn get_chunk_size(&self) -> u32;
 }
 
 // ===== CONTRACT STATE =====
@@ -100,6 +118,8 @@ trait SurveillanceDashboard {
 
 #[derive(Serialize, Deserialize, WeilType)]
 pub struct SurveillanceDashboardContractState {
+    /// Config secrets
+    secrets: Secrets<DashboardConfig>,
     /// All alerts stored in order of arrival
     alerts: WeilVec<Alert>,
     /// All workflow executions
@@ -111,6 +131,8 @@ pub struct SurveillanceDashboardContractState {
     /// Running counters for stats
     alert_count_today: u32,
     workflow_count_today: u32,
+    /// WebServer for hosting static assets
+    server: WebServer,
 }
 
 // ===== CONTRACT IMPLEMENTATION =====
@@ -125,12 +147,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Self: Sized,
     {
         Ok(SurveillanceDashboardContractState {
+            secrets: Secrets::new(),
             alerts: WeilVec::new(WeilId(1)),
             workflows: WeilVec::new(WeilId(2)),
             cases: WeilVec::new(WeilId(3)),
             risk_entities: WeilVec::new(WeilId(4)),
             alert_count_today: 0,
             workflow_count_today: 0,
+            server: WebServer::new(WeilId(5), None),
         })
     }
 
@@ -236,15 +260,17 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     /// Get live alerts with optional severity filter
     #[query]
-    async fn get_live_alerts(&self, severity_filter: String, limit: u32) -> Result<Vec<Alert>, String> {
+    async fn get_live_alerts(&self, severity_filter: Option<String>, limit: Option<u32>) -> Result<Vec<Alert>, String> {
+        let filter = severity_filter.unwrap_or_else(|| "ALL".to_string());
+        let lim = limit.unwrap_or(20);
         let mut result = Vec::new();
         let len = self.alerts.len();
         let mut count = 0u32;
         
         for i in (0..len).rev() {
-            if count >= limit { break; }
+            if count >= lim { break; }
             if let Some(alert) = self.alerts.get(i) {
-                if severity_filter == "ALL" || alert.severity == severity_filter {
+                if filter == "ALL" || alert.severity == filter {
                     result.push(alert);
                     count += 1;
                 }
@@ -255,15 +281,17 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     /// Get workflow execution history
     #[query]
-    async fn get_workflow_history(&self, workflow_type: String, limit: u32) -> Result<Vec<WorkflowExecution>, String> {
+    async fn get_workflow_history(&self, workflow_type: Option<String>, limit: Option<u32>) -> Result<Vec<WorkflowExecution>, String> {
+        let wf_type = workflow_type.unwrap_or_else(|| "ALL".to_string());
+        let lim = limit.unwrap_or(20);
         let mut result = Vec::new();
         let len = self.workflows.len();
         let mut count = 0u32;
         
         for i in (0..len).rev() {
-            if count >= limit { break; }
+            if count >= lim { break; }
             if let Some(wf) = self.workflows.get(i) {
-                if workflow_type == "ALL" || wf.workflow_type == workflow_type {
+                if wf_type == "ALL" || wf.workflow_type == wf_type {
                     result.push(wf);
                     count += 1;
                 }
@@ -274,15 +302,17 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     /// Get cases by status
     #[query]
-    async fn get_cases_by_status(&self, status: String, limit: u32) -> Result<Vec<CaseRecord>, String> {
+    async fn get_cases_by_status(&self, status: Option<String>, limit: Option<u32>) -> Result<Vec<CaseRecord>, String> {
+        let st = status.unwrap_or_else(|| "ALL".to_string());
+        let lim = limit.unwrap_or(20);
         let mut result = Vec::new();
         let len = self.cases.len();
         let mut count = 0u32;
         
         for i in 0..len {
-            if count >= limit { break; }
+            if count >= lim { break; }
             if let Some(case) = self.cases.get(i) {
-                if status == "ALL" || case.status == status {
+                if st == "ALL" || case.status == st {
                     result.push(case);
                     count += 1;
                 }
@@ -327,15 +357,17 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     /// Get high-risk entities above a threshold
     #[query]
-    async fn get_high_risk_entities(&self, min_risk_score: u32, limit: u32) -> Result<Vec<RiskEntity>, String> {
+    async fn get_high_risk_entities(&self, min_risk_score: Option<u32>, limit: Option<u32>) -> Result<Vec<RiskEntity>, String> {
+        let min_score = min_risk_score.unwrap_or(70);
+        let lim = limit.unwrap_or(20);
         let mut result = Vec::new();
         let len = self.risk_entities.len();
         let mut count = 0u32;
         
         for i in 0..len {
-            if count >= limit { break; }
+            if count >= lim { break; }
             if let Some(entity) = self.risk_entities.get(i) {
-                if entity.risk_score >= min_risk_score {
+                if entity.risk_score >= min_score {
                     result.push(entity);
                     count += 1;
                 }
@@ -360,16 +392,18 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     /// Get alerts for a specific entity
     #[query]
-    async fn get_entity_alerts(&self, entity_id: String, limit: u32) -> Result<Vec<Alert>, String> {
+    async fn get_entity_alerts(&self, entity_id: String, limit: Option<u32>) -> Result<Vec<Alert>, String> {
+        let lim = limit.unwrap_or(20);
         let mut result = Vec::new();
         let len = self.alerts.len();
         let mut count = 0u32;
         
         for i in (0..len).rev() {
-            if count >= limit { break; }
+            if count >= lim { break; }
             if let Some(alert) = self.alerts.get(i) {
                 if alert.entity_id == entity_id {
                     result.push(alert);
+                    count += 1;
                 }
             }
         }
@@ -482,14 +516,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     "type": "function",
     "function": {
       "name": "get_live_alerts",
-      "description": "Get latest surveillance alerts. Use filter='ALL' for everything.",
+      "description": "Get latest surveillance alerts. Defaults: severity_filter=ALL, limit=20",
       "parameters": {
         "type": "object",
         "properties": {
-          "severity_filter": { "type": "string", "enum": ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Severity level to filter by" },
-          "limit": { "type": "integer", "description": "Maximum number of alerts to return" }
+          "severity_filter": { "type": "string", "enum": ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Optional severity filter (default: ALL)" },
+          "limit": { "type": "integer", "description": "Optional max alerts (default: 20)" }
         },
-        "required": ["severity_filter", "limit"]
+        "required": []
       }
     }
   },
@@ -497,14 +531,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     "type": "function",
     "function": {
       "name": "get_workflow_history",
-      "description": "Get history of automated workflows",
+      "description": "Get history of automated workflows. Defaults: workflow_type=ALL, limit=20",
       "parameters": {
         "type": "object",
         "properties": {
-          "workflow_type": { "type": "string", "description": "Type of workflow to filter by (or ALL)" },
-          "limit": { "type": "integer", "description": "Maximum number of records" }
+          "workflow_type": { "type": "string", "description": "Optional workflow type filter (default: ALL)" },
+          "limit": { "type": "integer", "description": "Optional max records (default: 20)" }
         },
-        "required": ["workflow_type", "limit"]
+        "required": []
       }
     }
   },
@@ -512,14 +546,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     "type": "function",
     "function": {
       "name": "get_cases_by_status",
-      "description": "Get investigation cases by status",
+      "description": "Get investigation cases. Defaults: status=ALL, limit=20",
       "parameters": {
         "type": "object",
         "properties": {
-          "status": { "type": "string", "enum": ["ALL", "OPEN", "INVESTIGATING", "CLOSED"], "description": "Case status to filter by" },
-          "limit": { "type": "integer", "description": "Maximum number of cases" }
+          "status": { "type": "string", "enum": ["ALL", "OPEN", "INVESTIGATING", "CLOSED"], "description": "Optional status filter (default: ALL)" },
+          "limit": { "type": "integer", "description": "Optional max cases (default: 20)" }
         },
-        "required": ["status", "limit"]
+        "required": []
       }
     }
   },
@@ -539,14 +573,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     "type": "function",
     "function": {
       "name": "get_high_risk_entities",
-      "description": "Get entities with high risk scores",
+      "description": "Get entities with high risk scores. Defaults: min_risk_score=70, limit=20",
       "parameters": {
         "type": "object",
         "properties": {
-          "min_risk_score": { "type": "integer", "description": "Minimum risk score threshold" },
-          "limit": { "type": "integer", "description": "Maximum number of entities" }
+          "min_risk_score": { "type": "integer", "description": "Optional minimum score (default: 70)" },
+          "limit": { "type": "integer", "description": "Optional max entities (default: 20)" }
         },
-        "required": ["min_risk_score", "limit"]
+        "required": []
       }
     }
   },
@@ -568,14 +602,14 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     "type": "function",
     "function": {
       "name": "get_entity_alerts",
-      "description": "Get all alerts for a specific entity",
+      "description": "Get all alerts for a specific entity. Default limit: 20",
       "parameters": {
         "type": "object",
         "properties": {
           "entity_id": { "type": "string", "description": "Entity ID to search for" },
-          "limit": { "type": "integer", "description": "Maximum number of alerts" }
+          "limit": { "type": "integer", "description": "Optional max alerts (default: 20)" }
         },
-        "required": ["entity_id", "limit"]
+        "required": ["entity_id"]
       }
     }
   }
@@ -585,5 +619,52 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
     #[query]
     fn prompts(&self) -> String {
         r#"{ "prompts": [] }"#.to_string()
+    }
+
+    // ===== WEBSERVER METHODS for static asset hosting =====
+
+    #[mutate]
+    fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String> {
+        self.server.start_file_upload(WeilId(5), path, total_chunks)
+    }
+
+    #[query]
+    fn total_chunks(&self, path: String) -> Result<u32, String> {
+        self.server.total_chunks(path)
+    }
+
+    #[mutate]
+    fn add_path_content(
+        &mut self,
+        path: String,
+        chunk: Vec<u8>,
+        index: u32,
+    ) -> Result<(), String> {
+        self.server.add_path_content(path, chunk, index)
+    }
+
+    #[mutate]
+    fn finish_upload(&mut self, path: String, size_bytes: u32) -> Result<(), String> {
+        self.server.finish_upload(path, size_bytes)
+    }
+
+    #[query]
+    fn http_content(
+        &self,
+        path: String,
+        index: u32,
+        method: String,
+    ) -> (u16, std::collections::HashMap<String, String>, Vec<u8>) {
+        self.server.http_content(path, index, method)
+    }
+
+    #[query]
+    fn size_bytes(&self, path: String) -> Result<u32, String> {
+        self.server.size_bytes(path)
+    }
+
+    #[query]
+    fn get_chunk_size(&self) -> u32 {
+        self.server.get_chunk_size()
     }
 }

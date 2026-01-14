@@ -4,7 +4,7 @@
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
 # Get this after deploying surveillance_dashboard first
-dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
 
 # REQUIRED: Neo4j Aura connection details
 # Get these from: https://console.neo4j.io (free signup)
@@ -15,13 +15,13 @@ dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
 # - Password (auto-generated, save it!)
 
 # Neo4j Aura URI (format: neo4j+s://xxxxx.databases.neo4j.io)
-neo4j_uri: "<YOUR_NEO4J_AURA_URI>"
+neo4j_uri: "neo4j+s://b498098e.databases.neo4j.io"
 
 # Neo4j username (usually "neo4j")
 neo4j_user: "neo4j"
 
 # Neo4j password (from Aura console)
-neo4j_password: "<YOUR_NEO4J_PASSWORD>"
+neo4j_password: "nNsEFO6j3uopnIQT4b9S_fcRNhj4mp_etVuCv0lS2A4"
 
 # Deploy command:
 #   deploy -e -f target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm \

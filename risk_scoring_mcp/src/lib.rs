@@ -19,7 +19,7 @@
 use serde::{Deserialize, Serialize};
 use weil_macros::{constructor, query, smart_contract, WeilType};
 use weil_rs::config::Secrets;
-use weil_rs::runtime::call_contract;
+use weil_rs::runtime::Runtime;
 
 // ===== CONFIGURATION =====
 
@@ -154,10 +154,11 @@ impl RiskScoringContractState {
                     timestamp: 0, // Would use Runtime::timestamp()
                 };
                 
-                let _ = call_contract::<String, String>(
-                    &config.dashboard_contract_id,
-                    "push_alert",
-                    (alert,),
+                let args = serde_json::to_string(&alert).unwrap();
+                let _ = Runtime::call_contract::<String>(
+                    config.dashboard_contract_id.clone(),
+                    "push_alert".to_string(),
+                    Some(args),
                 );
             }
         }

@@ -1,0 +1,12 @@
+// Dashboard WebServer - Minimal contract for hosting static assets only
+// The UI will connect to surveillance_dashboard contract via wallet
+
+record WebServerConfig {
+    name: string
+}
+
+@webserver
+interface DashboardWebserver {
+    config -> WebServerConfig;
+    query func version() -> string
+}

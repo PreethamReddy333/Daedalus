@@ -3,17 +3,17 @@
 # Uses Supabase (PostgreSQL + REST API) for UPSI records
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-dashboard_contract_id: "<PASTE_DASHBOARD_CONTRACT_ID_HERE>"
+dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
 
 # REQUIRED: Supabase project URL
 # Get this from: https://supabase.com/dashboard/project/_/settings/api
 # Example: "https://xyzproject.supabase.co"
-supabase_url: "<YOUR_SUPABASE_PROJECT_URL>"
+supabase_url: "https://gmjhagtqxczsfitnfztg.supabase.co"
 
 # REQUIRED: Supabase anon/public key
 # Get this from: https://supabase.com/dashboard/project/_/settings/api
 # Use the "anon" "public" key (safe for client-side use with RLS)
-supabase_anon_key: "<YOUR_SUPABASE_ANON_KEY>"
+supabase_anon_key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtamhhZ3RxeGN6c2ZpdG5menRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDg5NDUsImV4cCI6MjA4MzcyNDk0NX0.XXDM-Y1824IwAxfeysP9CxCIRWA88V1GkYgKBN4ODwg"
 
 # Deploy command:
 #   deploy -e -f target/wasm32-unknown-unknown/release/upsi_database_mcp.wasm \

@@ -1,5 +1,9 @@
 // Entity Relationship MCP - Uses Neo4j Aura Graph Database
 // Maps relationships between entities (traders, companies, insiders)
+//
+// Context Cache Feature:
+// - Implements fuzzy resolution for entity_id and company_symbol
+// - Call get_context() FIRST to see cached parameters
 
 // ===== Configuration =====
 record EntityRelationshipConfig {
@@ -45,20 +49,40 @@ record InsiderStatus {
     window_status: string      // "OPEN", "CLOSED"
 }
 
+// ===== Context Cache Structures =====
+
+record QueryHistory {
+    method_name: string,
+    entity_id: string,
+    company_symbol: string,
+    timestamp: u64,
+    natural_language_prompt: string
+}
+
+record QueryContext {
+    recent_queries: list<QueryHistory>,
+    last_entity_id: string,
+    last_company_symbol: string
+}
+
 // ===== MCP Interface =====
 
 @mcp
 interface EntityRelationship {
     config -> EntityRelationshipConfig;
 
+    // CALL THIS FIRST - Get context from recent queries
+    // Returns cached entity_ids and company_symbols for fuzzy resolution
+    mutate func get_context() -> QueryContext;
+
     // Get entity details by ID from Neo4j
-    query func get_entity(
-        // Entity identifier
+    mutate func get_entity(
+        // Entity identifier - supports fuzzy matching
         entity_id: string
     ) -> result<Entity, string>;
 
     // Search entities by name or PAN in Neo4j
-    query func search_entities(
+    mutate func search_entities(
         // Search query (name or PAN)
         search_query: string,
         // Maximum results
@@ -66,46 +90,46 @@ interface EntityRelationship {
     ) -> result<list<Entity>, string>;
 
     // Get all relationships for an entity from Neo4j graph
-    query func get_relationships(
-        // Entity to get relationships for
+    mutate func get_relationships(
+        // Entity to get relationships for - supports fuzzy matching
         entity_id: string
     ) -> result<list<Relationship>, string>;
 
     // Get connected entities within N hops using Neo4j graph traversal
-    query func get_connected_entities(
-        // Starting entity
+    mutate func get_connected_entities(
+        // Starting entity - supports fuzzy matching
         entity_id: string,
         // Maximum hops to traverse (1-5)
         max_hops: u32
     ) -> result<list<EntityConnection>, string>;
 
     // Check if entity is an insider for a company
-    query func check_insider_status(
-        // Entity to check
+    mutate func check_insider_status(
+        // Entity to check - supports fuzzy matching
         entity_id: string,
-        // Company symbol
+        // Company symbol - supports fuzzy matching
         company_symbol: string
     ) -> result<InsiderStatus, string>;
 
     // Get all insiders for a company from Neo4j
-    query func get_company_insiders(
-        // Company symbol
+    mutate func get_company_insiders(
+        // Company symbol - supports fuzzy matching
         company_symbol: string
     ) -> result<list<InsiderStatus>, string>;
 
     // Check if two entities are connected using Neo4j shortest path
-    query func are_entities_connected(
-        // First entity
+    mutate func are_entities_connected(
+        // First entity - supports fuzzy matching
         entity_id_1: string,
-        // Second entity
+        // Second entity - supports fuzzy matching
         entity_id_2: string,
         // Maximum hops to check
         max_hops: u32
     ) -> result<EntityConnection, string>;
 
     // Get family members of an entity
-    query func get_family_members(
-        // Entity ID
+    mutate func get_family_members(
+        // Entity ID - supports fuzzy matching
         entity_id: string
     ) -> result<list<Entity>, string>
 }

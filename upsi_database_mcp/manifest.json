@@ -1,0 +1,11 @@
+{
+    "applet_manifest_version": 1,
+    "bin": "upsi_database_mcp.wasm",
+    "widl": "upsi_database.widl",
+    "config": "config.yaml",
+    "organization": "Weilliptic",
+    "author": "Weilliptic",
+    "logo": "https://raw.githubusercontent.com/weilliptic-public/mcp-logos/main/icons/database.svg",
+    "description": "UPSI Database MCP for tracking Unpublished Price Sensitive Information using Supabase.",
+    "outcall": true
+}

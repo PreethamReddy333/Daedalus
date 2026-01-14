@@ -52,18 +52,35 @@ pub struct InsiderStatus {
     pub window_status: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryHistory {
+    pub method_name: String,
+    pub entity_id: String,
+    pub company_symbol: String,
+    pub timestamp: u64,
+    pub natural_language_prompt: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueryContext {
+    pub recent_queries: Vec<QueryHistory>,
+    pub last_entity_id: String,
+    pub last_company_symbol: String,
+}
+
 trait EntityRelationship {
     fn new() -> Result<Self, String>
     where
         Self: Sized;
-    async fn get_entity(&self, entity_id: String) -> Result<Entity, String>;
-    async fn search_entities(&self, search_query: String, limit: u32) -> Result<Vec<Entity>, String>;
-    async fn get_relationships(&self, entity_id: String) -> Result<Vec<Relationship>, String>;
-    async fn get_connected_entities(&self, entity_id: String, max_hops: u32) -> Result<Vec<EntityConnection>, String>;
-    async fn check_insider_status(&self, entity_id: String, company_symbol: String) -> Result<InsiderStatus, String>;
-    async fn get_company_insiders(&self, company_symbol: String) -> Result<Vec<InsiderStatus>, String>;
-    async fn are_entities_connected(&self, entity_id_1: String, entity_id_2: String, max_hops: u32) -> Result<EntityConnection, String>;
-    async fn get_family_members(&self, entity_id: String) -> Result<Vec<Entity>, String>;
+    async fn get_context(&mut self) -> QueryContext;
+    async fn get_entity(&mut self, entity_id: String) -> Result<Entity, String>;
+    async fn search_entities(&mut self, search_query: String, limit: u32) -> Result<Vec<Entity>, String>;
+    async fn get_relationships(&mut self, entity_id: String) -> Result<Vec<Relationship>, String>;
+    async fn get_connected_entities(&mut self, entity_id: String, max_hops: u32) -> Result<Vec<EntityConnection>, String>;
+    async fn check_insider_status(&mut self, entity_id: String, company_symbol: String) -> Result<InsiderStatus, String>;
+    async fn get_company_insiders(&mut self, company_symbol: String) -> Result<Vec<InsiderStatus>, String>;
+    async fn are_entities_connected(&mut self, entity_id_1: String, entity_id_2: String, max_hops: u32) -> Result<EntityConnection, String>;
+    async fn get_family_members(&mut self, entity_id: String) -> Result<Vec<Entity>, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
 }
@@ -85,43 +102,48 @@ impl EntityRelationship for EntityRelationshipContractState {
     }
 
 
-    #[query]
-    async fn get_entity(&self, entity_id: String) -> Result<Entity, String> {
+    #[mutate]
+    async fn get_context(&mut self) -> QueryContext {
         unimplemented!();
     }
 
-    #[query]
-    async fn search_entities(&self, search_query: String, limit: u32) -> Result<Vec<Entity>, String> {
+    #[mutate]
+    async fn get_entity(&mut self, entity_id: String) -> Result<Entity, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_relationships(&self, entity_id: String) -> Result<Vec<Relationship>, String> {
+    #[mutate]
+    async fn search_entities(&mut self, search_query: String, limit: u32) -> Result<Vec<Entity>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_connected_entities(&self, entity_id: String, max_hops: u32) -> Result<Vec<EntityConnection>, String> {
+    #[mutate]
+    async fn get_relationships(&mut self, entity_id: String) -> Result<Vec<Relationship>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn check_insider_status(&self, entity_id: String, company_symbol: String) -> Result<InsiderStatus, String> {
+    #[mutate]
+    async fn get_connected_entities(&mut self, entity_id: String, max_hops: u32) -> Result<Vec<EntityConnection>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_company_insiders(&self, company_symbol: String) -> Result<Vec<InsiderStatus>, String> {
+    #[mutate]
+    async fn check_insider_status(&mut self, entity_id: String, company_symbol: String) -> Result<InsiderStatus, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn are_entities_connected(&self, entity_id_1: String, entity_id_2: String, max_hops: u32) -> Result<EntityConnection, String> {
+    #[mutate]
+    async fn get_company_insiders(&mut self, company_symbol: String) -> Result<Vec<InsiderStatus>, String> {
         unimplemented!();
     }
 
-    #[query]
-    async fn get_family_members(&self, entity_id: String) -> Result<Vec<Entity>, String> {
+    #[mutate]
+    async fn are_entities_connected(&mut self, entity_id_1: String, entity_id_2: String, max_hops: u32) -> Result<EntityConnection, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn get_family_members(&mut self, entity_id: String) -> Result<Vec<Entity>, String> {
         unimplemented!();
     }
 
@@ -132,6 +154,18 @@ impl EntityRelationship for EntityRelationshipContractState {
   {
     "type": "function",
     "function": {
+      "name": "get_context",
+      "description": "CALL THIS FIRST - Get context from recent queries\nReturns cached entity_ids and company_symbols for fuzzy resolution\n",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_entity",
       "description": "Get entity details by ID from Neo4j\n",
       "parameters": {
@@ -139,7 +173,7 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id": {
             "type": "string",
-            "description": "Entity identifier\n"
+            "description": "Entity identifier - supports fuzzy matching\n"
           }
         },
         "required": [
@@ -182,7 +216,7 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id": {
             "type": "string",
-            "description": "Entity to get relationships for\n"
+            "description": "Entity to get relationships for - supports fuzzy matching\n"
           }
         },
         "required": [
@@ -201,7 +235,7 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id": {
             "type": "string",
-            "description": "Starting entity\n"
+            "description": "Starting entity - supports fuzzy matching\n"
           },
           "max_hops": {
             "type": "integer",
@@ -225,11 +259,11 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id": {
             "type": "string",
-            "description": "Entity to check\n"
+            "description": "Entity to check - supports fuzzy matching\n"
           },
           "company_symbol": {
             "type": "string",
-            "description": "Company symbol\n"
+            "description": "Company symbol - supports fuzzy matching\n"
           }
         },
         "required": [
@@ -249,7 +283,7 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "company_symbol": {
             "type": "string",
-            "description": "Company symbol\n"
+            "description": "Company symbol - supports fuzzy matching\n"
           }
         },
         "required": [
@@ -268,11 +302,11 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id_1": {
             "type": "string",
-            "description": "First entity\n"
+            "description": "First entity - supports fuzzy matching\n"
           },
           "entity_id_2": {
             "type": "string",
-            "description": "Second entity\n"
+            "description": "Second entity - supports fuzzy matching\n"
           },
           "max_hops": {
             "type": "integer",
@@ -297,7 +331,7 @@ impl EntityRelationship for EntityRelationshipContractState {
         "properties": {
           "entity_id": {
             "type": "string",
-            "description": "Entity ID\n"
+            "description": "Entity ID - supports fuzzy matching\n"
           }
         },
         "required": [

@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/preetham/Documents/demoo/case_management_mcp/target/wasm32-unknown-unknown/release/build/mime_guess-7185bf44d48d3abb/out/mime_types_generated.rs
