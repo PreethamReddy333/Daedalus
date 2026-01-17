@@ -4,7 +4,7 @@
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
 # Get this after deploying surveillance_dashboard first
-dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
+dashboard_contract_id: "aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga"
 
 # REQUIRED: Neo4j Aura connection details
 # Get these from: https://console.neo4j.io (free signup)

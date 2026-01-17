@@ -3,11 +3,11 @@
 # Uses Alpha Vantage and TAAPI.IO for market data analysis
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-dashboard_contract_id: "aaaaaaxk72xww6xop6hzo4wun4lqxynj4fksmfkck6mfxmtpvzcysw4fim"
+dashboard_contract_id: "aaaaaa75usb5abovzcm5fn6uhxkzsfmsaur5mktbszcezkcq4n3os4bnfy"
 
 # REQUIRED: Alpha Vantage API Key
 # Get free key: https://www.alphavantage.co/support/#api-key
-alpha_vantage_key: "1WC77J5TMYH2D814"
+alpha_vantage_key: "S0BNFA6IUBH3EK6U"
 
 # REQUIRED: TAAPI.IO API Secret
 # Get free key: https://taapi.io/

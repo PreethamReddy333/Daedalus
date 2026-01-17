@@ -1,4 +1,6 @@
 deploy -e -f /Users/preetham/Documents/demoo/regulatory_reports_mcp/target/wasm32-unknown-unknown/release/regulatory_reports_mcp.wasm -p /Users/preetham/Documents/demoo/regulatory_reports_mcp/regulatory_reports.widl -c /Users/preetham/Documents/demoo/regulatory_reports_mcp/config.yaml
 
-{"batch_author":"p-guw1m-1.us-west1.main.weilliptic.net-8000","batch_id":"aed807b133507a65905a933cff26c9f6e3f1bdab6530e02e65e22146efc865b1","block_height":822511,"contract_address":"aaaaaa7pnhwr7c7mh4poqhyw7cwqy436lffiao3be64djpa67ieuyglmru","creation_time":"2026-01-14T05:46:08Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaayqkczkw2eybo2jurr6dxauth6bxzsjblugyal2ulchkd7ofwqk2q"}
+
+{"batch_author":"p-guw1m-3.us-west1.main.weilliptic.net-8000","batch_id":"1e8750f6d12f5076d42342e9017cf58eba0ce35f9f1e6f0cf75822bbc1596450","block_height":1121516,"contract_address":"aaaaaa5wldrjksipyse3sw5xmsny2ytl7n23oqeqqe7n6glapm52z7nvse","creation_time":"2026-01-16T12:22:40Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaazd6jruvvug2o4ke4orktjce6opys5ymszt6sepqujixmaq2mkfeu"}
+
 upgrade -u aaaaaa7pnhwr7c7mh4poqhyw7cwqy436lffiao3be64djpa67ieuyglmru -f /Users/preetham/Documents/demoo/regulatory_reports_mcp/target/wasm32-unknown-unknown/release/regulatory_reports_mcp.wasm -p /Users/preetham/Documents/demoo/regulatory_reports_mcp/regulatory_reports.widl -c /Users/preetham/Documents/demoo/regulatory_reports_mcp/config.yaml

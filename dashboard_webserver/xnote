@@ -1,1 +1,6 @@
-{"batch_author":"p-guw1m-3.us-west1.main.weilliptic.net-8000","batch_id":"5180537216bde053711662de9f7a9a096327590431a4352c1dbb7dac76a6ecca","block_height":920205,"contract_address":"aaaaaazh2zshyvjy4dgk7dwt4ufheff3fak4dp4rds34q4yzwha7z7ecse","creation_time":"2026-01-14T08:29:07Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaazfnl5jnivom2jbozhseko4toikdozvbrygp5cq5trmp7hv2a2b6q"}
+{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"dab2630aa438b9141b4e6b99f99c65a3b5b846200636f4de0b1a12eed7eee118","block_height":1491816,"contract_address":"aaaaaa75usb5abovzcm5fn6uhxkzsfmsaur5mktbszcezkcq4n3os4bnfy","creation_time":"2026-01-16T22:40:27Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa34fayfrnlsf3xjnjjaniaqvlawyii2q4lfctcjypdud2do7riwvu"}
+
+deploy -e -f /Users/preetham/Documents/demoo/dashboard_webserver/target/wasm32-unknown-unknown/release/dashboard_webserver.wasm -p /Users/preetham/Documents/demoo/dashboard_webserver/dashboard_webserver.widl -c /Users/preetham/Documents/demoo/dashboard_webserver/config.yaml
+
+https://sentinel.unweil.me/aaaaaa5j35wzo5rpgew4zco6vbf4yzsdyfvc5wlmulxeinnyg6n6kubafu/static_assets/index.html
+

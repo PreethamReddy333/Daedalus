@@ -543,6 +543,30 @@ impl JiraIntegration for JiraIntegrationContractState {
   {
     "type": "function",
     "function": {
+      "name": "add_comment",
+      "description": "Add a comment to a ticket\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ticket_key": {
+            "type": "string",
+            "description": "Jira ticket key\n"
+          },
+          "comment": {
+            "type": "string",
+            "description": "Comment text\n"
+          }
+        },
+        "required": [
+          "ticket_key",
+          "comment"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "update_ticket_status",
       "description": "Update the status of a Jira ticket\n",
       "parameters": {

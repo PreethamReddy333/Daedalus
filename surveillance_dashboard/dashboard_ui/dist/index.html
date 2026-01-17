@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Surveillance Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="./assets/index-B5zryHb9.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DwbaJB8U.css">
+</head>
+
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">⛓️ Sentinel</div>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-item active" data-panel="dashboard">📊 Dashboard</button>
+                <button class="nav-item" data-panel="alerts">🚨 Alerts</button>
+                <button class="nav-item" data-panel="entities">👥 Entities</button>
+                <button class="nav-item" data-panel="trades">📈 Trades</button>
+                <button class="nav-item" data-panel="cases">📋 Cases</button>
+            </nav>
+            <div class="sidebar-footer">
+                <button id="connectWallet" class="wallet-btn">🔗 Connect Wallet</button>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-dot offline"></span>
+                    <span class="status-text">Disconnected</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Panel -->
+            <section class="panel active" id="panel-dashboard">
+                <h1>📊 Surveillance Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card critical">
+                        <div class="stat-icon">🚨</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="totalAlerts">--</span>
+                            <span class="stat-label">Active Alerts</span>
+                        </div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-icon">📁</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="openCases">--</span>
+                            <span class="stat-label">Open Cases</span>
+                        </div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="riskEntities">--</span>
+                            <span class="stat-label">High Risk Entities</span>
+                        </div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="completedWorkflows">--</span>
+                            <span class="stat-label">Workflows Today</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="recent-section">
+                    <h2>Recent Alerts</h2>
+                    <div class="data-list" id="recentAlerts">
+                        <div class="empty-state">Connect wallet to load data...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Alerts Panel -->
+            <section class="panel" id="panel-alerts">
+                <h1>🚨 Live Alerts</h1>
+                <div class="toolbar">
+                    <select id="alertSeverityFilter" class="filter-select">
+                        <option value="ALL">All Severities</option>
+                        <option value="CRITICAL">Critical</option>
+                        <option value="HIGH">High</option>
+                        <option value="MEDIUM">Medium</option>
+                    </select>
+                    <button class="btn btn-primary" id="refreshAlerts">🔄 Refresh</button>
+                </div>
+                <div class="data-list" id="alertsList">
+                    <div class="empty-state">Loading alerts...</div>
+                </div>
+            </section>
+
+            <!-- Entities Panel -->
+            <section class="panel" id="panel-entities">
+                <h1>👥 Entity Search</h1>
+                <div class="toolbar">
+                    <input type="text" id="entitySearch" placeholder="Enter entity ID (e.g., ENT-0001)"
+                        class="search-input">
+                    <button class="btn btn-primary" id="searchEntity">🔍 Search</button>
+                </div>
+                <div class="entity-details" id="entityDetails">
+                    <div class="empty-state">Search for an entity</div>
+                </div>
+                <h2>Relationships</h2>
+                <div class="data-list" id="entityRelationships">
+                    <div class="empty-state">No relationships loaded</div>
+                </div>
+            </section>
+
+            <!-- Trades Panel -->
+            <section class="panel" id="panel-trades">
+                <h1>📈 Trade Data</h1>
+                <div class="toolbar">
+                    <input type="text" id="symbolSearch" placeholder="Enter symbol (e.g., RELIANCE)"
+                        class="search-input">
+                    <button class="btn btn-primary" id="searchTrades">🔍 Get Trades</button>
+                    <button class="btn btn-secondary" id="analyzeVolume">📊 Analyze</button>
+                </div>
+                <div class="trade-analysis" id="tradeAnalysis"></div>
+                <div class="data-list" id="tradesList">
+                    <div class="empty-state">Enter a symbol to search trades</div>
+                </div>
+            </section>
+
+            <!-- Cases Panel -->
+            <section class="panel" id="panel-cases">
+                <h1>📋 Investigation Cases</h1>
+                <div class="toolbar">
+                    <select id="caseStatusFilter" class="filter-select">
+                        <option value="ALL">All Status</option>
+                        <option value="OPEN">Open</option>
+                        <option value="INVESTIGATING">Investigating</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                    <button class="btn btn-primary" id="refreshCases">🔄 Refresh</button>
+                </div>
+                <div class="data-list" id="casesList">
+                    <div class="empty-state">Loading cases...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+</body>
+
+</html>

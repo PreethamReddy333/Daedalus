@@ -1,12 +1,267 @@
-// Dashboard WebServer - Minimal contract for hosting static assets only
-// The UI will connect to surveillance_dashboard contract via wallet
+// Dashboard WebServer (Unified Applet)
+// - Serves static UI assets
+// - Stores business logic state (Alerts, Cases, Workflows)
+// - Handles cross-contract calls from other MCPs
+// - Handles direct queries from Frontend UI
 
-record WebServerConfig {
+// ===== Config =====
+record DashboardConfig {
     name: string
 }
 
+// ===== Data Structures =====
+
+record Alert {
+    id: string,
+    alert_type: string,       // "INSIDER", "SPOOFING", "WASH_TRADE", "PUMP_DUMP", "FRONT_RUN"
+    severity: string,         // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+    risk_score: u32,
+    entity_id: string,
+    symbol: string,
+    description: string,
+    workflow_id: string,
+    timestamp: u64
+}
+
+record WorkflowExecution {
+    id: string,
+    workflow_type: string,    // "INSIDER_DETECTION", "MANIPULATION_CHECK", "KYC_ONBOARD"
+    trigger: string,
+    steps_completed: u32,
+    total_steps: u32,
+    status: string,           // "RUNNING", "COMPLETED", "FAILED"
+    started_at: u64,
+    completed_at: u64,
+    result_summary: string
+}
+
+record CaseRecord {
+    case_id: string,
+    case_type: string,        // "INSIDER_TRADING", "SPOOFING", "WASH_TRADING"
+    status: string,           // "OPEN", "INVESTIGATING", "ESCALATED", "CLOSED"
+    priority: string,         // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+    subject_entity: string,
+    symbol: string,
+    risk_score: u32,
+    assigned_to: string,
+    created_at: u64,
+    updated_at: u64,
+    summary: string
+}
+
+record SurveillanceStats {
+    total_alerts_today: u32,
+    total_workflows_today: u32,
+    open_cases: u32,
+    high_risk_entities: u32,
+    compliance_score: u32
+}
+
+record RiskEntity {
+    entity_id: string,
+    entity_name: string,
+    risk_score: u32,
+    alert_count: u32,
+    last_alert_at: u64
+}
+
+// ===== External Records (For Proxy Methods) =====
+
+record Trade {
+    trade_id: string,
+    symbol: string,
+    account_id: string,
+    trade_type: string,
+    quantity: u64,
+    price: string,
+    value: string,
+    exchange: string,
+    segment: string,
+    timestamp: u64,
+    order_id: string
+}
+
+record Entity {
+    entity_id: string,
+    entity_type: string,
+    name: string,
+    pan_number: string,
+    registration_id: string
+}
+
+record Relationship {
+    source_entity_id: string,
+    target_entity_id: string,
+    relationship_type: string,
+    relationship_detail: string,
+    strength: u32,
+    verified: bool
+}
+
+record InsiderStatus {
+    entity_id: string,
+    company_symbol: string,
+    is_insider: bool,
+    insider_type: string,
+    designation: string,
+    window_status: string
+}
+
+record ReportResult {
+    report_id: string,
+    report_type: string,
+    storage_path: string,
+    download_url: string,
+    expires_at: u64,
+    risk_score: u32,
+    success: bool,
+    error: string
+}
+
+record UPSIRecord {
+    upsi_id: string,
+    company_symbol: string,
+    upsi_type: string,
+    description: string,
+    nature: string,
+    created_date: u64,
+    public_date: u64,
+    is_public: bool
+}
+
+record TradingWindowStatus {
+    company_symbol: string,
+    window_status: string,
+    closure_reason: string,
+    closure_start: u64,
+    expected_opening: u64
+}
+
+record TradeAnalysis {
+    symbol: string,
+    total_volume: u64,
+    avg_price: string,
+    high_price: string,
+    low_price: string,
+    buy_volume: u64,
+    sell_volume: u64,
+    trade_count: u32,
+    concentration_ratio: string
+}
+
+// ===== Unified Interface =====
+
 @webserver
 interface DashboardWebserver {
-    config -> WebServerConfig;
-    query func version() -> string
+    config -> DashboardConfig;
+    
+    // Check health
+    query func ping() -> string;
+    
+    // ===== MUTATE: Called by other MCPs via cross-contract =====
+    
+    // Push a new alert from Risk Scoring or Anomaly Detection MCP
+    mutate func push_alert(alert: Alert) -> result<string, string>;
+    
+    // Log workflow start - called by first MCP in workflow
+    mutate func log_workflow_start(
+        workflow_id: string,
+        workflow_type: string,
+        trigger: string,
+        total_steps: u32
+    ) -> result<string, string>;
+    
+    // Update workflow progress - called as workflow progresses
+    mutate func update_workflow_progress(
+        workflow_id: string,
+        steps_completed: u32,
+        status: string,
+        result_summary: string
+    ) -> result<string, string>;
+    
+    // Upsert a case record - called by Case Management MCP
+    mutate func upsert_case(case_record: CaseRecord) -> result<string, string>;
+    
+    // Register a high-risk entity
+    mutate func register_risk_entity(entity: RiskEntity) -> result<string, string>;
+    
+    // ===== QUERY: Called by Frontend UI =====
+    
+    // Get live alerts with severity filter
+    query func get_live_alerts(
+        severity_filter: option<string>,
+        limit: option<u32>
+    ) -> result<list<Alert>, string>;
+    
+    // Get workflow execution history
+    query func get_workflow_history(
+        workflow_type: option<string>,
+        limit: option<u32>
+    ) -> result<list<WorkflowExecution>, string>;
+    
+    // Get cases by status
+    query func get_cases_by_status(
+        status: option<string>,
+        limit: option<u32>
+    ) -> result<list<CaseRecord>, string>;
+    
+    // Get surveillance statistics
+    query func get_stats() -> result<SurveillanceStats, string>;
+    
+    // Get high-risk entities
+    query func get_high_risk_entities(
+        min_risk_score: option<u32>,
+        limit: option<u32>
+    ) -> result<list<RiskEntity>, string>;
+    
+    // Get specific case details
+    query func get_case_details(case_id: string) -> result<CaseRecord, string>;
+    
+    // Get alerts for a specific entity
+    // Get alerts for a specific entity
+    query func get_entity_alerts(
+        entity_id: string,
+        limit: option<u32>
+    ) -> result<list<Alert>, string>;
+    
+    // ===== Proxy Methods (Cross-Contract) =====
+    
+    mutate func get_trades_proxy(
+        symbol: string, 
+        limit: option<u32>
+    ) -> result<list<Trade>, string>;
+
+    mutate func search_entities_proxy(
+        search_query: string
+    ) -> result<list<Entity>, string>;
+
+    mutate func get_relationships_proxy(
+        entity_id: string
+    ) -> result<list<Relationship>, string>;
+
+    mutate func check_insider_proxy(
+        entity_id: string, 
+        company_symbol: string
+    ) -> result<InsiderStatus, string>;
+
+    mutate func get_active_upsi_proxy(
+        company_symbol: string
+    ) -> result<list<UPSIRecord>, string>;
+
+    mutate func get_trading_window_proxy(
+        company_symbol: string
+    ) -> result<TradingWindowStatus, string>;
+
+    mutate func analyze_volume_proxy(
+        symbol: string
+    ) -> result<TradeAnalysis, string>;
+
+    mutate func generate_report_proxy(
+        report_type: string,
+        params: string
+    ) -> result<ReportResult, string>;
+    
+    // Generic MCP Tools discovery (renamed to avoid reserved keyword conflict)
+    query func get_tools() -> string;
+    query func get_prompts() -> string
 }

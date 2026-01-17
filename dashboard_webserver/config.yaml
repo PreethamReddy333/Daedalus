@@ -1,2 +1,5 @@
-# Dashboard WebServer Configuration
-name: "SurveillanceDashboardUI"
+name: "DashboardWebserver"
+trade_data_contract_id: "aaaaaaybdqd7sq2cm5hupegidzcbjdosu7aumux2rvggp7apzi3zycouwy"
+entity_relationship_contract_id: "aaaaaa5hq6wgvdbjfv74wauozxbruqau44jzzpsd652lfmdux62lfvd7ca"
+regulatory_reports_contract_id: "aaaaaa5wldrjksipyse3sw5xmsny2ytl7n23oqeqqe7n6glapm52z7nvse"
+upsi_database_contract_id: "aaaaaa2xqdbzi6oefivlpj4g2nee6vwzdnyeap4arogh5j5jf3x6vvfcfe"

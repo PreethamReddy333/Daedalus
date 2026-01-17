@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use weil_macros::{constructor, mutate, query, smart_contract, WeilType};
 use weil_rs::config::Secrets;
 use weil_rs::http::{HttpClient, HttpMethod};
+use weil_rs::runtime::Runtime;
 
 // ===== CONFIGURATION =====
 
@@ -85,6 +86,20 @@ pub struct QueryContext {
     pub recent_queries: Vec<QueryHistory>,
     pub last_entity_id: String,
     pub last_company_symbol: String,
+}
+
+// Alert struct for dashboard push
+#[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
+pub struct Alert {
+    pub id: String,
+    pub alert_type: String,
+    pub severity: String,
+    pub risk_score: u32,
+    pub entity_id: String,
+    pub symbol: String,
+    pub description: String,
+    pub workflow_id: String,
+    pub timestamp: u64,
 }
 
 // Neo4j Query API v2 request/response structures
@@ -306,6 +321,33 @@ impl EntityRelationshipContractState {
         }
         
         (self.resolve_entity(entity_partial), self.resolve_company(company_partial))
+    }
+
+    /// Push alert to surveillance dashboard via cross-contract call
+    fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let alert = Alert {
+            id: format!("ENTITY-{}", 0u64),
+            alert_type: alert_type.to_string(),
+            severity: severity.to_string(),
+            risk_score,
+            entity_id: entity_id.to_string(),
+            symbol: symbol.to_string(),
+            description: description.to_string(),
+            workflow_id: "".to_string(),
+            timestamp: 0,
+        };
+
+        let args = serde_json::to_string(&alert).unwrap_or_default();
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_alert".to_string(),
+            Some(args),
+        );
     }
 }
 
@@ -557,14 +599,28 @@ impl EntityRelationship for EntityRelationshipContractState {
         if let Some(ref data) = response.data {
             if let Some(row) = data.values.first() {
                 if row.len() >= 6 {
-                    return Ok(InsiderStatus {
+                    let status = InsiderStatus {
                         entity_id: row[0].as_str().unwrap_or("").to_string(),
                         company_symbol: row[1].as_str().unwrap_or("").to_string(),
                         is_insider: row[2].as_bool().unwrap_or(false),
                         insider_type: row[3].as_str().unwrap_or("").to_string(),
                         designation: row[4].as_str().unwrap_or("").to_string(),
                         window_status: row[5].as_str().unwrap_or("OPEN").to_string(),
-                    });
+                    };
+                    
+                    // Push alert if confirmed insider
+                    if status.is_insider {
+                        self.maybe_push_alert(
+                            "INSIDER_CONFIRMED",
+                            "HIGH",
+                            70,
+                            &status.entity_id,
+                            &status.company_symbol,
+                            &format!("Confirmed insider: {} is {} ({}) for {}", status.entity_id, status.insider_type, status.designation, status.company_symbol),
+                        );
+                    }
+                    
+                    return Ok(status);
                 }
             }
         }

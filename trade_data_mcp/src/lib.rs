@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use weil_macros::{constructor, mutate, query, smart_contract, WeilType};
 use weil_rs::config::Secrets;
 use weil_rs::http::{HttpClient, HttpMethod};
+use weil_rs::runtime::Runtime;
 
 // ===== CONFIGURATION =====
 
@@ -92,6 +93,20 @@ pub struct QueryContext {
     pub recent_queries: Vec<QueryHistory>,
     pub last_symbol: String,
     pub last_account_id: String,
+}
+
+// Alert struct for dashboard push
+#[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
+pub struct Alert {
+    pub id: String,
+    pub alert_type: String,
+    pub severity: String,
+    pub risk_score: u32,
+    pub entity_id: String,
+    pub symbol: String,
+    pub description: String,
+    pub workflow_id: String,
+    pub timestamp: u64,
 }
 
 // ===== TRAIT DEFINITION =====
@@ -289,6 +304,33 @@ impl TradeDataContractState {
         
         partial.to_string()
     }
+
+    /// Push alert to surveillance dashboard via cross-contract call if anomaly detected
+    fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let alert = Alert {
+            id: format!("TRADE-ANOMALY-{}", 0u64),
+            alert_type: alert_type.to_string(),
+            severity: severity.to_string(),
+            risk_score,
+            entity_id: entity_id.to_string(),
+            symbol: symbol.to_string(),
+            description: description.to_string(),
+            workflow_id: "".to_string(),
+            timestamp: 0,
+        };
+
+        let args = serde_json::to_string(&alert).unwrap_or_default();
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_alert".to_string(),
+            Some(args),
+        );
+    }
 }
 
 // ===== CONTRACT IMPLEMENTATION =====
@@ -461,6 +503,19 @@ impl TradeData for TradeDataContractState {
         
         let volume_ratio = if avg_volume_30d > 0 { current_volume as f64 / avg_volume_30d as f64 } else { 1.0 };
         let is_anomaly = volume_ratio > 2.5;
+        let anomaly_score = if is_anomaly { ((volume_ratio - 1.0) * 100.0) as u32 } else { 0 };
+        
+        // Push alert to dashboard if significant volume anomaly detected
+        if is_anomaly && anomaly_score > 50 {
+            self.maybe_push_alert(
+                "VOLUME_ANOMALY",
+                if anomaly_score > 100 { "CRITICAL" } else { "HIGH" },
+                anomaly_score,
+                "",
+                &resolved_symbol,
+                &format!("Volume anomaly detected: {} has {:.1}x normal volume (score: {})", resolved_symbol, volume_ratio, anomaly_score),
+            );
+        }
         
         Ok(VolumeAnomaly {
             symbol: resolved_symbol,
@@ -468,7 +523,7 @@ impl TradeData for TradeDataContractState {
             avg_volume_30d,
             volume_ratio: format!("{:.2}", volume_ratio),
             is_anomaly,
-            anomaly_score: if is_anomaly { ((volume_ratio - 1.0) * 100.0) as u32 } else { 0 },
+            anomaly_score,
         })
     }
 

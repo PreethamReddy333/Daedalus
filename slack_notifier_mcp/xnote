@@ -1,6 +1,6 @@
-upgrade -u aaaaaaviqnxcumgieofsqcexi3et4mtypp4adfgrnmnbcfj5ln4ajlij24 -f /Users/preetham/Documents/demoo/slack_notifier_mcp/target/wasm32-unknown-unknown/release/slack_notifier_mcp.wasm -p /Users/preetham/Documents/demoo/slack_notifier_mcp/slack_notifier.widl -c /Users/preetham/Documents/demoo/slack_notifier_mcp/config.yaml
+upgrade -u aaaaaa2c7jxhzusn7x66q3xr3fqeniqur7fm65solgyrpbii2ovz2zalr4 -f /Users/preetham/Documents/demoo/slack_notifier_mcp/target/wasm32-unknown-unknown/release/slack_notifier_mcp.wasm -p /Users/preetham/Documents/demoo/slack_notifier_mcp/slack_notifier.widl -c /Users/preetham/Documents/demoo/slack_notifier_mcp/config.yaml
 
-{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"b4c3f8ea2dfc9e47a3d86f54bc1670cc069396de388a288bebe971780c8e81d4","block_height":143736,"contract_address":"aaaaaa32j2c5cu5yn5qnxwjvmfkr7jdu7kxackaxyrj7742sombuims4eq","creation_time":"2026-01-13T10:53:44Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa64i22puttplwbopgtk5exdbfwvngwtzjjknyzyi2efra4jjsitm4"}
+{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"f858c70c101cf135ed73227ab01348ffb222535ed9ff73065ca75bf78180f3b2","block_height":1122438,"contract_address":"aaaaaa2c7jxhzusn7x66q3xr3fqeniqur7fm65solgyrpbii2ovz2zalr4","creation_time":"2026-01-16T12:24:13Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaazryccl23ruf4wb3zjvf2oraszjf5otidnjags5yfmstywap7lsw4"}
 
   {
     "type": "function",

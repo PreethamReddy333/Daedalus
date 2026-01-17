@@ -92,9 +92,9 @@ trait AnomalyDetection {
     fn new() -> Result<Self, String> where Self: Sized;
     async fn get_context(&mut self) -> QueryContext;
     async fn detect_spoofing(&mut self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String>;
-    async fn detect_wash_trading(&self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String>;
+    async fn detect_wash_trading(&mut self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String>;
     async fn detect_pump_dump(&mut self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator, String>;
-    async fn detect_front_running(&self, entity_id: String, symbol: String, client_trade_timestamp: u64, prop_trade_timestamp: u64) -> Result<AnomalyResult, String>;
+    async fn detect_front_running(&mut self, entity_id: String, symbol: String, client_trade_timestamp: u64, prop_trade_timestamp: u64) -> Result<AnomalyResult, String>;
     async fn analyze_volume_anomaly(&mut self, symbol: String, interval: String) -> Result<AnomalyResult, String>;
     async fn check_rsi_levels(&mut self, symbol: String) -> Result<String, String>;
     async fn scan_entity_anomalies(&self, entity_id: String) -> Result<Vec<AnomalyResult>, String>;
@@ -368,6 +368,35 @@ impl AnomalyDetectionContractState {
         // No cross-match found, fall back to individual resolution
         (self.resolve_entity(entity_partial), self.resolve_symbol(symbol_partial))
     }
+
+    /// Push alert to surveillance dashboard via cross-contract call if anomaly detected
+    fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let alert = Alert {
+            id: format!("ANOMALY-{}-{}", alert_type, 0u64), // Simplified timestamp
+            alert_type: alert_type.to_string(),
+            severity: severity.to_string(),
+            risk_score,
+            entity_id: entity_id.to_string(),
+            symbol: symbol.to_string(),
+            description: description.to_string(),
+            workflow_id: "".to_string(),
+            timestamp: 0, 
+        };
+
+        // Wrap the alert in a JSON object with the parameter name "alert"
+        let args = serde_json::json!({ "alert": alert }).to_string();
+        
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_alert".to_string(),
+            Some(args),
+        );
+    }
 }
 
 // ===== CONTRACT IMPLEMENTATION =====
@@ -491,6 +520,27 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         
         let is_spoof = is_large_order && market_volume < 100000; // Large relative to market
         
+        // Push alert to dashboard if spoofing detected
+        if is_spoof {
+            self.maybe_push_alert(
+                "SPOOFING",
+                "HIGH",
+                75,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Spoofing detected: Order {} has high cancellation rate and large size vs market", order_id),
+            );
+        } else {
+            self.maybe_push_alert(
+                "SPOOFING_CHECK",
+                "INFO",
+                10,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Spoofing check passed for order {}", order_id),
+            );
+        }
+        
         Ok(SpoofingIndicator {
             order_id,
             is_spoof,
@@ -501,16 +551,40 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     }
 
     /// Detect wash trading
-    #[query]
-    async fn detect_wash_trading(&self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String> {
+    #[mutate]
+    async fn detect_wash_trading(&mut self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String> {
         // Cross-parameter resolution
         // Try to resolve entity and symbol together first
         let (resolved_entity, resolved_symbol) = self.resolve_from_cache(&entity_id, &symbol);
         // Then resolve counterparty separately (or against symbol)
         let (resolved_counterparty, _) = self.resolve_from_cache(&counterparty_id, &symbol);
         
+        // Update cache
+        self.update_cache("detect_wash_trading", &resolved_entity, &resolved_symbol, 
+            &format!("Check wash trading between {} and {} on {}", resolved_entity, resolved_counterparty, resolved_symbol));
+        
         // Wash trading = Entity trading with itself or collider
         let is_same_entity = resolved_entity == resolved_counterparty;
+        
+        if is_same_entity {
+            self.maybe_push_alert(
+                "WASH_TRADING",
+                "HIGH",
+                80,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Wash trading detected: {} trading with itself/collider {}", resolved_entity, resolved_counterparty),
+            );
+        } else {
+            self.maybe_push_alert(
+                "WASH_TRADING_CHECK",
+                "INFO",
+                10,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Wash trading check passed between {} and {}", resolved_entity, resolved_counterparty),
+            );
+        }
         
         Ok(WashTradeIndicator {
             entity_id: resolved_entity,
@@ -541,6 +615,27 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         // Heuristic: Price up > 10% in short time is suspicious
         let is_pump = change_pct > 10.0;
         
+        // Push alert to dashboard if pump & dump detected
+        if is_pump {
+            self.maybe_push_alert(
+                "PUMP_DUMP",
+                "CRITICAL",
+                85,
+                "",
+                &resolved_symbol,
+                &format!("Pump & Dump detected: {} has {}% price change in {} min window", resolved_symbol, change_pct, time_window_minutes),
+            );
+        } else {
+             self.maybe_push_alert(
+                "PUMP_DUMP_CHECK",
+                "INFO",
+                10,
+                "",
+                &resolved_symbol,
+                &format!("Pump & Dump check passed: {} has {}% price change (normal)", resolved_symbol, change_pct),
+            );
+        }
+        
         Ok(PumpDumpIndicator {
             symbol: resolved_symbol,
             is_pump_dump: is_pump,
@@ -551,10 +646,14 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     }
 
     /// Detect potential front-running (placeholder for logic requiring high-frequency data)
-    #[query]
-    async fn detect_front_running(&self, entity_id: String, symbol: String, client_trade_timestamp: u64, prop_trade_timestamp: u64) -> Result<AnomalyResult, String> {
+    #[mutate]
+    async fn detect_front_running(&mut self, entity_id: String, symbol: String, client_trade_timestamp: u64, prop_trade_timestamp: u64) -> Result<AnomalyResult, String> {
         // Cross-parameter resolution
         let (resolved_entity, resolved_symbol) = self.resolve_from_cache(&entity_id, &symbol);
+        
+        // Update cache
+        self.update_cache("detect_front_running", &resolved_entity, &resolved_symbol, 
+            &format!("Check front running for {} on {}", resolved_entity, resolved_symbol));
         
         let client_ts = client_trade_timestamp;
         let prop_ts = prop_trade_timestamp;
@@ -565,6 +664,26 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         };
         
         let is_suspicious = diff < 2 && prop_ts < client_ts; // Prop traded *just* before client
+        
+        if is_suspicious {
+            self.maybe_push_alert(
+                "FRONT_RUNNING",
+                "CRITICAL",
+                90,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Front running detected: Prop desk traded {}s before client", diff),
+            );
+        } else {
+            self.maybe_push_alert(
+                "FRONT_RUNNING_CHECK",
+                "INFO",
+                10,
+                &resolved_entity,
+                &resolved_symbol,
+                &format!("Front running check passed: Trade gap {}s (safe)", diff),
+            );
+        }
         
         Ok(AnomalyResult {
             entity_id: resolved_entity,
@@ -591,11 +710,33 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         
         let volume: u64 = quote.volume.parse().unwrap_or(0);
         
+        let is_anomaly = volume > 1000000;
+        
+        if is_anomaly {
+            self.maybe_push_alert(
+                "VOLUME_SPIKE",
+                "MEDIUM",
+                60,
+                "MARKET",
+                &resolved_symbol,
+                &format!("Volume spike detected: {} volume > 1M", volume),
+            );
+        } else {
+             self.maybe_push_alert(
+                "VOLUME_CHECK",
+                "INFO",
+                10,
+                "MARKET",
+                &resolved_symbol,
+                &format!("Volume check passed: {} volume is normal", volume),
+            );
+        }
+        
         Ok(AnomalyResult {
             entity_id: "MARKET".to_string(),
             symbol: resolved_symbol,
             anomaly_type: "VOLUME_SPIKE".to_string(),
-            confidence_score: if volume > 1000000 { 80 } else { 20 },
+            confidence_score: if is_anomaly { 80 } else { 20 },
             details: format!("Current Volume: {}", volume),
             timestamp: 0,
             supporting_evidence: "Volume analysis from Alpha Vantage".to_string(),
@@ -615,10 +756,34 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         let rsi = self.get_rsi(&resolved_symbol).await?;
         
         if rsi > 70.0 {
+            self.maybe_push_alert(
+                "RSI_OVERBOUGHT",
+                "HIGH",
+                70,
+                "MARKET",
+                &resolved_symbol,
+                &format!("RSI Overbought: {:.2} > 70", rsi),
+            );
             Ok(format!("{} is OVERBOUGHT (RSI: {:.2})", resolved_symbol, rsi))
         } else if rsi < 30.0 {
+            self.maybe_push_alert(
+                "RSI_OVERSOLD",
+                "MEDIUM",
+                50,
+                "MARKET",
+                &resolved_symbol,
+                &format!("RSI Oversold: {:.2} < 30", rsi),
+            );
             Ok(format!("{} is OVERSOLD (RSI: {:.2})", resolved_symbol, rsi))
         } else {
+            self.maybe_push_alert(
+                "RSI_CHECK",
+                "INFO",
+                10,
+                "MARKET",
+                &resolved_symbol,
+                &format!("RSI Normal: {:.2}", rsi),
+            );
             Ok(format!("{} is NEUTRAL (RSI: {:.2})", resolved_symbol, rsi))
         }
     }

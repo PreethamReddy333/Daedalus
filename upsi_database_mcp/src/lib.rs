@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use weil_macros::{constructor, mutate, query, smart_contract, WeilType};
 use weil_rs::config::Secrets;
 use weil_rs::http::{HttpClient, HttpMethod};
+use weil_rs::runtime::Runtime;
 
 // ===== CONFIGURATION =====
 
@@ -80,6 +81,20 @@ pub struct QueryContext {
     pub last_entity_id: String,
     pub last_company_symbol: String,
     pub last_upsi_id: String,
+}
+
+// Alert struct for dashboard push
+#[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
+pub struct Alert {
+    pub id: String,
+    pub alert_type: String,
+    pub severity: String,
+    pub risk_score: u32,
+    pub entity_id: String,
+    pub symbol: String,
+    pub description: String,
+    pub workflow_id: String,
+    pub timestamp: u64,
 }
 
 // ===== TRAIT DEFINITION =====
@@ -316,6 +331,33 @@ impl UPSIDatabaseContractState {
         // No cross-match found, fall back to individual resolution
         (self.resolve_entity(entity_partial), self.resolve_company(company_partial), self.resolve_upsi_id(upsi_partial))
     }
+
+    /// Push alert to surveillance dashboard via cross-contract call
+    fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let alert = Alert {
+            id: format!("UPSI-{}", 0u64),
+            alert_type: alert_type.to_string(),
+            severity: severity.to_string(),
+            risk_score,
+            entity_id: entity_id.to_string(),
+            symbol: symbol.to_string(),
+            description: description.to_string(),
+            workflow_id: "".to_string(),
+            timestamp: 0,
+        };
+
+        let args = serde_json::to_string(&alert).unwrap_or_default();
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_alert".to_string(),
+            Some(args),
+        );
+    }
 }
 
 // ===== CONTRACT IMPLEMENTATION =====
@@ -523,7 +565,16 @@ impl UPSIDatabase for UPSIDatabaseContractState {
             Ok(window) => {
                 if window.window_status == "CLOSED" {
                     if trade_timestamp >= window.closure_start && trade_timestamp < window.expected_opening {
-                         return Ok(true);
+                        // Push alert for trading window violation
+                        self.maybe_push_alert(
+                            "WINDOW_VIOLATION",
+                            "CRITICAL",
+                            90,
+                            &resolved_entity,
+                            &resolved_company,
+                            &format!("Trading window violation: {} traded {} during closed window", resolved_entity, resolved_company),
+                        );
+                        return Ok(true);
                     }
                 }
                 Ok(false)

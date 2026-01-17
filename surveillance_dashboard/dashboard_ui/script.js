@@ -1,104 +1,154 @@
 /**
- * Surveillance Dashboard - JavaScript
- * Connects to WeilChain via WeilWallet and loads data from surveillance_dashboard contract
+ * Surveillance Command Center - Dashboard Script
+ * Connects to VeilChain contracts via WeilWallet
  */
 
-// Contract configuration
-const CONFIG = {
-    contractAddress: 'aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga',
+// ===== Contract Addresses (Updated 2026-01-17) =====
+// Using dashboard_webserver as the single Backend-for-Frontend (BFF)
+// All calls go through dashboard_webserver which proxies to other MCPs
+
+
+const CONTRACTS = {
+    // Main dashboard - handles alerts, cases, stats AND proxies to other MCPs
+    dashboard: 'aaaaaa5ubvlbxzazcstcwswneev23lgmcclraqavqk7erp6lc6k5shxe2y',
+    // Direct access kept for reference (but use dashboard proxy methods instead)
+    trade_data: 'aaaaaaybdqd7sq2cm5hupegidzcbjdosu7aumux2rvggp7apzi3zycouwy',
+    entity_relationship: 'aaaaaa5hq6wgvdbjfv74wauozxbruqau44jzzpsd652lfmdux62lfvd7ca',
+    anomaly_detection: 'aaaaaa3coddrezgqwpnjbnvpzia5nb3tg6o3jhex2nibeccuf6gqudcwc4',
+    regulatory_reports: 'aaaaaa5wldrjksipyse3sw5xmsny2ytl7n23oqeqqe7n6glapm52z7nvse',
+    slack_notifier: 'aaaaaa2c7jxhzusn7x66q3xr3fqeniqur7fm65solgyrpbii2ovz2zalr4'
 };
 
-// State
 let wallet = null;
 let connected = false;
-let elements = {};
 
-// Initialize after DOM is ready
+// ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
-    elements = {
-        connectBtn: document.getElementById('connectWallet'),
-        connectionStatus: document.getElementById('connectionStatus'),
-        alertsToday: document.getElementById('alertsToday'),
-        openCases: document.getElementById('openCases'),
-        highRiskEntities: document.getElementById('highRiskEntities'),
-        complianceScore: document.getElementById('complianceScore'),
-        alertsList: document.getElementById('alertsList'),
-        casesList: document.getElementById('casesList'),
-        riskGrid: document.getElementById('riskGrid'),
-        workflowList: document.getElementById('workflowList'),
-        severityFilter: document.getElementById('severityFilter'),
-        caseStatusFilter: document.getElementById('caseStatusFilter'),
-    };
-
-    // Event Listeners
-    if (elements.connectBtn) {
-        elements.connectBtn.addEventListener('click', connectWallet);
-        console.log('Connect button found and listener attached');
-    } else {
-        console.error('Connect button not found!');
-    }
-
-    if (elements.severityFilter) {
-        elements.severityFilter.addEventListener('change', loadAlerts);
-    }
-    if (elements.caseStatusFilter) {
-        elements.caseStatusFilter.addEventListener('change', loadCases);
-    }
-
-    // Load demo data for preview
+    console.log('Dashboard initialized');
+    setupNavigation();
+    setupEventListeners();
     loadDemoData();
 });
 
+// ===== Navigation =====
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const panel = item.dataset.panel;
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            item.classList.add('active');
+            // Update panels
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + panel).classList.add('active');
+        });
+    });
+}
+
+// ===== Event Listeners =====
+function setupEventListeners() {
+    // Wallet
+    document.getElementById('connectWallet').addEventListener('click', connectWallet);
+
+    // Alerts
+    document.getElementById('refreshAlerts')?.addEventListener('click', loadAlerts);
+
+    // Cases  
+    document.getElementById('refreshCases')?.addEventListener('click', loadCases);
+
+    // Entity search
+    document.getElementById('searchEntity')?.addEventListener('click', searchEntity);
+
+    // Trades
+    document.getElementById('searchTrades')?.addEventListener('click', searchTrades);
+    document.getElementById('analyzeVolume')?.addEventListener('click', analyzeVolume);
+}
+
 // ===== Wallet Connection =====
 async function connectWallet() {
-    console.log('Connect wallet clicked');
+    console.log('Connecting wallet...');
 
     if (typeof window.WeilWallet === 'undefined') {
-        alert('WeilWallet extension not found. Please install it from the Chrome Web Store.');
+        alert('WeilWallet extension not found. Please install it.');
         return;
     }
 
     try {
-        // Use correct method name from WeilWallet docs
-        const accounts = await window.WeilWallet.request({
-            method: 'weil_requestAccounts',
-        });
-        console.log('Accounts received:', accounts);
+        const accounts = await window.WeilWallet.request({ method: 'weil_requestAccounts' });
+        console.log('Connected accounts:', accounts);
 
-        if (accounts && accounts.length > 0) {
-            wallet = window.WeilWallet;
-            connected = true;
-            updateConnectionStatus(true);
-            loadAllData();
-        }
+        wallet = window.WeilWallet;
+        connected = true;
+
+        // Update UI
+        document.querySelector('.status-dot').className = 'status-dot online';
+        document.querySelector('.status-text').textContent = 'Connected';
+        document.getElementById('connectWallet').textContent = '✓ Connected';
+        document.getElementById('connectWallet').disabled = true;
+
+        // Load real data
+        await loadAllData();
     } catch (error) {
-        console.error('Failed to connect wallet:', error);
-        alert('Failed to connect to wallet: ' + error.message);
+        console.error('Wallet connection failed:', error);
+        alert('Connection failed: ' + error.message);
     }
 }
 
-function updateConnectionStatus(isConnected) {
-    console.log('Updating connection status:', isConnected);
-    const statusEl = elements.connectionStatus;
-    if (!statusEl) {
-        console.error('Status element not found!');
-        return;
+// ===== Contract Calls =====
+// Using raw wallet.request() API for vanilla JavaScript
+
+async function callContract(contractKey, method, args = {}) {
+    if (!wallet) {
+        console.warn('Wallet not connected');
+        return null;
     }
 
-    const dot = statusEl.querySelector('.dot');
-    const text = statusEl.querySelector('span:last-child');
+    const address = CONTRACTS[contractKey];
+    if (!address) {
+        console.error('Unknown contract:', contractKey);
+        return null;
+    }
 
-    if (isConnected) {
-        if (dot) dot.className = 'dot online';
-        if (text) text.textContent = 'Connected';
-        if (elements.connectBtn) {
-            elements.connectBtn.textContent = '✓ Connected';
-            elements.connectBtn.disabled = true;
+    try {
+        console.log(`[${new Date().toISOString()}] Calling ${contractKey}.${method} at ${address}`, args);
+
+        // Use weil_sendTransaction for contract calls
+        const result = await wallet.request({
+            method: 'weil_sendTransaction',
+            params: {
+                to: address,
+                method: method,
+                args: JSON.stringify(args)
+            }
+        });
+
+        console.log(`[${new Date().toISOString()}] Raw result from ${method}:`, result);
+
+        // Result may already be parsed, or needs parsing
+        let parsed = result;
+        if (typeof result === 'string') {
+            try {
+                parsed = JSON.parse(result);
+            } catch (e) {
+                // Already a string value
+            }
         }
-    } else {
-        if (dot) dot.className = 'dot offline';
-        if (text) text.textContent = 'Disconnected';
+
+        // Handle nested JSON in Ok result
+        if (parsed && parsed.Ok && typeof parsed.Ok === 'string') {
+            try {
+                parsed.Ok = JSON.parse(parsed.Ok);
+            } catch (e) {
+                // Value is already a plain string
+            }
+        }
+
+        console.log(`[${new Date().toISOString()}] Parsed result from ${method}:`, parsed);
+        return parsed;
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] Error calling ${contractKey}.${method}:`, error.message);
+        console.error('Full error:', error);
+        return null;
     }
 }
 
@@ -107,220 +157,215 @@ async function loadAllData() {
     await Promise.all([
         loadStats(),
         loadAlerts(),
-        loadCases(),
-        loadRiskEntities(),
-        loadWorkflows(),
+        loadCases()
     ]);
 }
 
-async function callContract(method, args = {}) {
-    if (!wallet) return null;
-
-    try {
-        const result = await wallet.request({
-            method: 'weil_call',
-            params: {
-                to: CONFIG.contractAddress,
-                method: method,
-                args: JSON.stringify(args),
-            },
-        });
-        return JSON.parse(result);
-    } catch (error) {
-        console.error(`Error calling ${method}:`, error);
-        return null;
-    }
-}
-
 async function loadStats() {
-    const stats = await callContract('get_stats');
-    if (stats && stats.Ok) {
-        const data = stats.Ok;
-        elements.alertsToday.textContent = data.total_alerts_today || 0;
-        elements.openCases.textContent = data.open_cases || 0;
-        elements.highRiskEntities.textContent = data.high_risk_entities || 0;
-        elements.complianceScore.textContent = (data.compliance_score || 0) + '%';
+    const stats = await callContract('dashboard', 'get_stats');
+    if (stats?.Ok) {
+        document.getElementById('totalAlerts').textContent = stats.Ok.total_alerts_today || 0;
+        document.getElementById('openCases').textContent = stats.Ok.open_cases || 0;
+        document.getElementById('riskEntities').textContent = stats.Ok.high_risk_entities || 0;
+        document.getElementById('completedWorkflows').textContent = stats.Ok.total_workflows_today || 0;
     }
 }
 
 async function loadAlerts() {
-    const severity = elements.severityFilter ? elements.severityFilter.value : 'ALL';
-    const alerts = await callContract('get_live_alerts', {
+    const severity = document.getElementById('alertSeverityFilter')?.value || 'ALL';
+    const result = await callContract('dashboard', 'get_live_alerts', {
         severity_filter: severity === 'ALL' ? null : severity,
-        limit: 20,
+        limit: 20
     });
 
-    if (alerts && alerts.Ok) {
-        renderAlerts(alerts.Ok);
+    if (result?.Ok) {
+        renderAlerts(result.Ok, 'alertsList');
+        renderAlerts(result.Ok.slice(0, 5), 'recentAlerts');
     }
+}
+
+function renderAlerts(alerts, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!alerts || alerts.length === 0) {
+        container.innerHTML = '<div class="empty-state">No alerts found</div>';
+        return;
+    }
+
+    container.innerHTML = alerts.map(a => `
+        <div class="data-item">
+            <div class="data-item-main">
+                <div class="data-item-title">${a.alert_type}: ${a.description}</div>
+                <div class="data-item-meta">
+                    <span>📈 ${a.symbol}</span>
+                    <span>👤 ${a.entity_id}</span>
+                    <span>Score: ${a.risk_score}</span>
+                </div>
+            </div>
+            <span class="badge ${a.severity.toLowerCase()}">${a.severity}</span>
+        </div>
+    `).join('');
 }
 
 async function loadCases() {
-    const status = elements.caseStatusFilter ? elements.caseStatusFilter.value : 'ALL';
-    const cases = await callContract('get_cases_by_status', {
+    const status = document.getElementById('caseStatusFilter')?.value || 'ALL';
+    const result = await callContract('dashboard', 'get_cases_by_status', {
         status: status === 'ALL' ? null : status,
-        limit: 20,
+        limit: 20
     });
 
-    if (cases && cases.Ok) {
-        renderCases(cases.Ok);
+    if (result?.Ok) {
+        renderCases(result.Ok);
     }
-}
-
-async function loadRiskEntities() {
-    const entities = await callContract('get_high_risk_entities', {
-        min_risk_score: 70,
-        limit: 10,
-    });
-
-    if (entities && entities.Ok) {
-        renderRiskEntities(entities.Ok);
-    }
-}
-
-async function loadWorkflows() {
-    const workflows = await callContract('get_workflow_history', {
-        workflow_type: null,
-        limit: 10,
-    });
-
-    if (workflows && workflows.Ok) {
-        renderWorkflows(workflows.Ok);
-    }
-}
-
-// ===== Rendering Functions =====
-function renderAlerts(alerts) {
-    if (!elements.alertsList) return;
-
-    if (!alerts || alerts.length === 0) {
-        elements.alertsList.innerHTML = '<div class="empty-state">No alerts found</div>';
-        return;
-    }
-
-    elements.alertsList.innerHTML = alerts.map(alert => `
-        <div class="alert-item">
-            <div class="alert-severity ${alert.severity}"></div>
-            <div class="alert-content">
-                <div class="alert-title">${alert.alert_type}: ${alert.description}</div>
-                <div class="alert-meta">
-                    <span>📈 ${alert.symbol}</span>
-                    <span>👤 ${alert.entity_id}</span>
-                    <span>Score: ${alert.risk_score}</span>
-                </div>
-            </div>
-        </div>
-    `).join('');
 }
 
 function renderCases(cases) {
-    if (!elements.casesList) return;
+    const container = document.getElementById('casesList');
+    if (!container) return;
 
     if (!cases || cases.length === 0) {
-        elements.casesList.innerHTML = '<div class="empty-state">No cases found</div>';
+        container.innerHTML = '<div class="empty-state">No cases found</div>';
         return;
     }
 
-    elements.casesList.innerHTML = cases.map(c => `
-        <div class="case-item">
-            <div class="case-info">
-                <div class="case-id">${c.case_id}</div>
-                <div class="case-subject">${c.subject_entity} - ${c.symbol}</div>
-            </div>
-            <span class="case-status ${c.status}">${c.status}</span>
-        </div>
-    `).join('');
-}
-
-function renderRiskEntities(entities) {
-    if (!elements.riskGrid) return;
-
-    if (!entities || entities.length === 0) {
-        elements.riskGrid.innerHTML = '<div class="empty-state">No high-risk entities</div>';
-        return;
-    }
-
-    elements.riskGrid.innerHTML = entities.map(entity => `
-        <div class="risk-entity">
-            <div class="risk-entity-name">${entity.entity_name}</div>
-            <div class="risk-score-bar">
-                <div class="risk-score-fill ${entity.risk_score >= 85 ? 'high' : 'medium'}" 
-                     style="width: ${entity.risk_score}%"></div>
-            </div>
-            <div class="risk-meta">
-                <span>Score: ${entity.risk_score}</span>
-                <span>Alerts: ${entity.alert_count}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderWorkflows(workflows) {
-    if (!elements.workflowList) return;
-
-    if (!workflows || workflows.length === 0) {
-        elements.workflowList.innerHTML = '<div class="empty-state">No workflows found</div>';
-        return;
-    }
-
-    elements.workflowList.innerHTML = workflows.map(wf => {
-        const progress = wf.total_steps > 0 ? (wf.steps_completed / wf.total_steps) * 100 : 0;
-        const icon = wf.status === 'COMPLETED' ? '✅' : wf.status === 'FAILED' ? '❌' : '⏳';
-
-        return `
-            <div class="workflow-item">
-                <div class="workflow-status-icon">${icon}</div>
-                <div class="workflow-content">
-                    <div class="workflow-type">${wf.workflow_type}</div>
-                    <div class="workflow-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                        <span class="progress-text">${wf.steps_completed}/${wf.total_steps}</span>
-                    </div>
+    container.innerHTML = cases.map(c => `
+        <div class="data-item">
+            <div class="data-item-main">
+                <div class="data-item-title">${c.case_id} - ${c.subject_entity}</div>
+                <div class="data-item-subtitle">${c.summary || c.case_type}</div>
+                <div class="data-item-meta">
+                    <span>📈 ${c.symbol}</span>
+                    <span>👤 ${c.assigned_to || 'Unassigned'}</span>
                 </div>
             </div>
-        `;
-    }).join('');
+            <span class="badge ${c.status.toLowerCase()}">${c.status}</span>
+        </div>
+    `).join('');
 }
 
-// ===== Demo Mode =====
+async function searchEntity() {
+    const entityId = document.getElementById('entitySearch')?.value?.trim();
+    if (!entityId) {
+        alert('Please enter an entity ID');
+        return;
+    }
+
+    // Use dashboard proxy method instead of direct entity_relationship
+    const entity = await callContract('dashboard', 'search_entities_proxy', { search_query: entityId });
+    const container = document.getElementById('entityDetails');
+
+    if (entity?.Ok) {
+        const e = entity.Ok;
+        container.innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                <div style="width:48px;height:48px;background:var(--accent-purple);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>
+                <div>
+                    <div style="font-size:18px;font-weight:600;">${e.name}</div>
+                    <div style="font-size:13px;color:var(--text-secondary);">${e.entity_type} | ${e.entity_id}</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                <div><div style="font-size:12px;color:var(--text-muted);">PAN</div><div>${e.pan_number || 'N/A'}</div></div>
+                <div><div style="font-size:12px;color:var(--text-muted);">Registration</div><div>${e.registration_id || 'N/A'}</div></div>
+                <div><div style="font-size:12px;color:var(--text-muted);">Type</div><div>${e.entity_type}</div></div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '<div class="empty-state">Entity not found</div>';
+    }
+
+    // Load relationships
+    // Use dashboard proxy method
+    const rels = await callContract('dashboard', 'get_relationships_proxy', { entity_id: entityId });
+    const relContainer = document.getElementById('entityRelationships');
+
+    if (rels?.Ok && rels.Ok.length > 0) {
+        relContainer.innerHTML = rels.Ok.map(r => `
+            <div class="data-item">
+                <div class="data-item-main">
+                    <div class="data-item-title">${r.target_entity_id}</div>
+                    <div class="data-item-subtitle">${r.relationship_detail || ''}</div>
+                </div>
+                <span class="badge medium">${r.relationship_type}</span>
+            </div>
+        `).join('');
+    } else {
+        relContainer.innerHTML = '<div class="empty-state">No relationships found</div>';
+    }
+}
+
+async function searchTrades() {
+    const symbol = document.getElementById('symbolSearch')?.value?.toUpperCase()?.trim();
+    if (!symbol) {
+        alert('Please enter a symbol');
+        return;
+    }
+
+    // Use dashboard proxy method
+    const result = await callContract('dashboard', 'get_trades_proxy', { symbol, limit: 20 });
+    const container = document.getElementById('tradesList');
+
+    if (result?.Ok && result.Ok.length > 0) {
+        container.innerHTML = result.Ok.map(t => `
+            <div class="data-item">
+                <div class="data-item-main">
+                    <div class="data-item-title">${t.symbol} - ${t.trade_type}</div>
+                    <div class="data-item-meta">
+                        <span>Qty: ${t.quantity}</span>
+                        <span>Price: ${t.price}</span>
+                        <span>Account: ${t.account_id}</span>
+                    </div>
+                </div>
+                <span class="badge ${t.trade_type === 'BUY' ? 'open' : 'closed'}">${t.trade_type}</span>
+            </div>
+        `).join('');
+    } else {
+        container.innerHTML = '<div class="empty-state">No trades found</div>';
+    }
+}
+
+async function analyzeVolume() {
+    const symbol = document.getElementById('symbolSearch')?.value?.toUpperCase()?.trim();
+    if (!symbol) return;
+
+    // Use dashboard proxy method
+    const result = await callContract('dashboard', 'analyze_volume_proxy', { symbol });
+    const container = document.getElementById('tradeAnalysis');
+
+    if (result?.Ok) {
+        container.classList.add('visible');
+        const a = result.Ok;
+        container.innerHTML = `
+            <h3 style="margin-bottom:16px;">Volume Analysis: ${symbol}</h3>
+            <div class="analysis-grid">
+                <div><div class="analysis-value">${a.total_volume || 0}</div><div class="analysis-label">Total Volume</div></div>
+                <div><div class="analysis-value">${a.avg_price || 'N/A'}</div><div class="analysis-label">Avg Price</div></div>
+                <div><div class="analysis-value">${a.trade_count || 0}</div><div class="analysis-label">Trade Count</div></div>
+                <div><div class="analysis-value">${a.concentration_ratio || 'N/A'}</div><div class="analysis-label">Concentration</div></div>
+            </div>
+        `;
+    }
+}
+
+// ===== Demo Data (shown before wallet connection) =====
 function loadDemoData() {
-    // Demo stats
-    if (elements.alertsToday) elements.alertsToday.textContent = '24';
-    if (elements.openCases) elements.openCases.textContent = '7';
-    if (elements.highRiskEntities) elements.highRiskEntities.textContent = '5';
-    if (elements.complianceScore) elements.complianceScore.textContent = '92%';
+    document.getElementById('totalAlerts').textContent = '12';
+    document.getElementById('openCases').textContent = '5';
+    document.getElementById('riskEntities').textContent = '3';
+    document.getElementById('completedWorkflows').textContent = '8';
 
-    // Demo alerts
     const demoAlerts = [
-        { severity: 'CRITICAL', alert_type: 'INSIDER_TRADING', description: 'Large trade before earnings', symbol: 'RELIANCE', entity_id: 'ENT-001', risk_score: 92 },
-        { severity: 'HIGH', alert_type: 'WASH_TRADE', description: 'Circular trading pattern detected', symbol: 'TCS', entity_id: 'ENT-002', risk_score: 78 },
-        { severity: 'MEDIUM', alert_type: 'SPOOFING', description: 'Large orders cancelled rapidly', symbol: 'INFY', entity_id: 'ENT-003', risk_score: 65 },
+        { alert_type: 'INSIDER', severity: 'CRITICAL', symbol: 'RELIANCE', entity_id: 'ENT-0001', risk_score: 92, description: 'Pre-announcement heavy buying' },
+        { alert_type: 'WASH_TRADE', severity: 'HIGH', symbol: 'TCS', entity_id: 'ENT-0002', risk_score: 78, description: 'Circular trading pattern' },
+        { alert_type: 'SPOOFING', severity: 'MEDIUM', symbol: 'INFY', entity_id: 'ENT-0003', risk_score: 65, description: 'Order cancellation pattern' }
     ];
-    renderAlerts(demoAlerts);
+    renderAlerts(demoAlerts, 'recentAlerts');
+    renderAlerts(demoAlerts, 'alertsList');
 
-    // Demo cases
     const demoCases = [
-        { case_id: 'CASE-2026-001', subject_entity: 'Rajesh Kumar', symbol: 'RELIANCE', status: 'INVESTIGATING' },
-        { case_id: 'CASE-2026-002', subject_entity: 'Priya Sharma', symbol: 'TCS', status: 'OPEN' },
-        { case_id: 'CASE-2026-003', subject_entity: 'Amit Patel', symbol: 'HDFC', status: 'CLOSED' },
+        { case_id: 'CASE-2026-0001', subject_entity: 'Rajesh Kumar', symbol: 'RELIANCE', status: 'INVESTIGATING', summary: 'Insider trading investigation', assigned_to: 'Anil Verma' },
+        { case_id: 'CASE-2026-0002', subject_entity: 'Priya Sharma', symbol: 'TCS', status: 'OPEN', summary: 'Wash trading suspicion', assigned_to: 'Sunita Rao' }
     ];
     renderCases(demoCases);
-
-    // Demo risk entities
-    const demoRisk = [
-        { entity_name: 'Rajesh Kumar', risk_score: 92, alert_count: 5 },
-        { entity_name: 'Priya Sharma', risk_score: 78, alert_count: 3 },
-        { entity_name: 'Amit Patel', risk_score: 71, alert_count: 2 },
-    ];
-    renderRiskEntities(demoRisk);
-
-    // Demo workflows
-    const demoWorkflows = [
-        { workflow_type: 'INSIDER_DETECTION', status: 'COMPLETED', steps_completed: 5, total_steps: 5 },
-        { workflow_type: 'KYC_ONBOARD', status: 'RUNNING', steps_completed: 3, total_steps: 6 },
-        { workflow_type: 'MANIPULATION_CHECK', status: 'FAILED', steps_completed: 2, total_steps: 4 },
-    ];
-    renderWorkflows(demoWorkflows);
 }
