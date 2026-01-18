@@ -11,7 +11,7 @@ record AnomalyDetectionConfig {
 record AnomalyResult {
     entity_id: string,
     symbol: string,
-    anomaly_type: string,     // "SPOOFING", "WASH_TRADE", "PUMP_DUMP", "FRONT_RUNNING", "VOLUME_SPIKE"
+    anomaly_type: string,     
     confidence_score: u32,
     details: string,
     timestamp: u64,
