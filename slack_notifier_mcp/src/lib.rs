@@ -1,7 +1,3 @@
-//! # Slack Notifier MCP Server
-//!
-//! Sends alerts and notifications to Slack channels via webhooks.
-//! Provides real-time surveillance notifications to compliance teams.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -98,7 +94,6 @@ impl SlackNotifierContractState {
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
         
-        // Send JSON payload to Slack webhook
         let response = HttpClient::request(&config.webhook_url, HttpMethod::Post)
             .headers(headers)
             .body(payload.to_string())
@@ -149,14 +144,12 @@ impl SlackNotifier for SlackNotifierContractState {
         })
     }
 
-    /// Send a simple text message to Slack
     #[query]
     async fn send_message(&self, channel: String, message: String) -> Result<NotificationResult, String> {
         let text = format!("📢 *{}*\n{}", channel, message);
         self.send_to_slack(text).await
     }
 
-    /// Send a formatted alert notification
     #[query]
     async fn send_alert(&self, alert_type: String, severity: String, symbol: String, entity_id: String, description: String, risk_score: u32) -> Result<NotificationResult, String> {
         let emoji = self.get_severity_emoji(&severity);
@@ -167,7 +160,6 @@ impl SlackNotifier for SlackNotifierContractState {
         self.send_to_slack(text).await
     }
 
-    /// Send case update notification
     #[query]
     async fn send_case_update(&self, case_id: String, status: String, update_message: String, assigned_to: String) -> Result<NotificationResult, String> {
         let status_emoji = match status.as_str() {
@@ -185,7 +177,6 @@ impl SlackNotifier for SlackNotifierContractState {
         self.send_to_slack(text).await
     }
 
-    /// Send workflow completion notification
     #[query]
     async fn send_workflow_complete(&self, workflow_id: String, workflow_type: String, result_summary: String, alert_count: u32) -> Result<NotificationResult, String> {
         let alert_indicator = if alert_count > 0 { "🚨" } else { "✅" };
@@ -197,7 +188,6 @@ impl SlackNotifier for SlackNotifierContractState {
         self.send_to_slack(text).await
     }
 
-    /// Send daily summary report
     #[query]
     async fn send_daily_summary(&self, date: String, total_alerts: u32, critical_alerts: u32, open_cases: u32, new_cases: u32) -> Result<NotificationResult, String> {
         let text = format!(

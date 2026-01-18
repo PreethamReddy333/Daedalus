@@ -5,7 +5,7 @@
 # REQUIRED: Slack Webhook URL for sending notifications
 # Get this from: Slack > Apps > Incoming Webhooks > Add New Webhook
 # Example: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
-webhook_url: "https://hooks.slack.com/services/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"
+webhook_url: "https://hooks.slack.com/services/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"
 
 # REQUIRED: Default Slack channel for alerts
 # Include the # prefix

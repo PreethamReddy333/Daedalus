@@ -1,13 +1,3 @@
-//! # Jira MCP Server
-//!
-//! Creates and manages Jira tickets for surveillance cases.
-//! Enables team coordination and audit trail for investigations.
-//!
-//! ## Auth
-//! Uses HTTP Basic auth with email:api_token (Base64-encoded).
-//!
-//! ## API
-//! Jira Cloud REST API v3: https://developer.atlassian.com/cloud/jira/platform/rest/v3/
 
 use base64::{Engine as _, engine::general_purpose};
 use serde::{Deserialize, Serialize};
@@ -52,7 +42,6 @@ pub struct TicketResult {
     pub error: String,
 }
 
-// Jira API response structures
 #[derive(Debug, Deserialize)]
 struct JiraIssueResponse {
     id: String,
@@ -124,8 +113,7 @@ pub struct JiraIntegrationContractState {
 
 // ===== HELPER METHODS =====
 
-impl JiraIntegrationContractState {
-    /// Get headers for Jira API requests (following Confluence pattern)
+impl JiraIntegrationContractState {ˀ
     fn get_headers(&self) -> HashMap<String, String> {
         let config = self.secrets.config();
         let credentials = format!("{}:{}", config.jira_email, config.jira_api_token);
@@ -137,7 +125,6 @@ impl JiraIntegrationContractState {
         ])
     }
     
-    /// Make an authenticated HTTP request to Jira REST API
     async fn make_request(
         &self,
         method: HttpMethod,
@@ -188,7 +175,6 @@ impl JiraIntegration for JiraIntegrationContractState {
         })
     }
 
-    /// Create a new Jira ticket via POST /rest/api/3/issue
     #[mutate]
     async fn create_ticket(
         &self, 
@@ -202,7 +188,6 @@ impl JiraIntegration for JiraIntegrationContractState {
         let prio = priority.unwrap_or_else(|| "Medium".to_string());
         let itype = issue_type.unwrap_or_else(|| config.default_issue_type.clone());
         
-        // Jira API v3 uses Atlassian Document Format for description
         let payload = serde_json::json!({
             "fields": {
                 "project": { "key": config.project_key },
@@ -274,13 +259,11 @@ impl JiraIntegration for JiraIntegrationContractState {
         self.create_ticket(summary, Some(description), priority, Some("Task".to_string())).await
     }
 
-    /// Close a Jira ticket by transitioning to Done
     #[mutate]
     async fn close_ticket(&self, ticket_key: String, resolution: Option<String>) -> Result<TicketResult, String> {
         let config = self.secrets.config();
         let _res = resolution.unwrap_or_else(|| "Done".to_string());
         
-        // Transition to Done (transition ID 31 is common, but may vary)
         let payload = serde_json::json!({
             "transition": { "id": "31" }
         });
@@ -311,7 +294,6 @@ impl JiraIntegration for JiraIntegrationContractState {
         }
     }
 
-    /// Get ticket details via GET /rest/api/3/issue/{key}
     #[query]
     async fn get_ticket(&self, ticket_key: String) -> Result<JiraTicket, String> {
         let config = self.secrets.config();
@@ -326,7 +308,6 @@ impl JiraIntegration for JiraIntegrationContractState {
         
         let response_text = result.1;
         
-        // Parse Jira response
         match serde_json::from_str::<JiraIssueDetail>(&response_text) {
             Ok(issue) => Ok(JiraTicket {
                 ticket_id: issue.id,
@@ -345,12 +326,10 @@ impl JiraIntegration for JiraIntegrationContractState {
         }
     }
 
-    /// Add comment to ticket via POST /rest/api/3/issue/{key}/comment
     #[mutate]
     async fn add_comment(&self, ticket_key: String, comment: String) -> Result<TicketResult, String> {
         let config = self.secrets.config();
         
-        // Jira v3 uses Atlassian Document Format
         let payload = serde_json::json!({
             "body": {
                 "type": "doc",
@@ -388,17 +367,15 @@ impl JiraIntegration for JiraIntegrationContractState {
         }
     }
 
-    /// Update ticket status via transitions
     #[mutate]
     async fn update_ticket_status(&self, ticket_key: String, new_status: String) -> Result<TicketResult, String> {
         let config = self.secrets.config();
         
-        // Map common status names to transition IDs (these vary by workflow)
         let transition_id = match new_status.as_str() {
             "In Progress" => "21",
             "Done" => "31",
             "To Do" => "11",
-            _ => "21", // Default to In Progress
+            _ => "21", 
         };
         
         let payload = serde_json::json!({

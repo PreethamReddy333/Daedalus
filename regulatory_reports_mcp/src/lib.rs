@@ -1,18 +1,3 @@
-//! # Regulatory Reports MCP
-//!
-//! Generates compliance reports and uploads to Supabase Storage.
-//! Implements context caching with fuzzy parameter resolution.
-//!
-//! ## External Services:
-//! - Supabase Storage for report storage
-//! - SEBI API for report submission
-//!
-//! ## Cross-Contract Calls:
-//! - Jira MCP for ticket management
-//! - Risk Scoring MCP for entity risk calculations
-//! - Anomaly Detection MCP for pattern detection
-//! - Entity Relationship MCP for Neo4j graph queries
-//! - Surveillance Dashboard for stats and alerts
 
 mod anomaly_detection;
 mod dashboard;
@@ -41,7 +26,6 @@ pub struct RegulatoryReportsConfig {
     pub risk_scoring_contract_id: String,
     pub anomaly_detection_contract_id: String,
     pub entity_relationship_contract_id: String,
-    // Supabase Storage REST API
     pub supabase_url: String,
     pub supabase_service_key: String,
     pub supabase_bucket: String,
@@ -160,25 +144,20 @@ pub struct RegulatoryReportsContractState {
 impl RegulatoryReportsContractState {
     // ===== SUPABASE STORAGE METHODS =====
 
-    /// Upload content to Supabase Storage REST API
-    /// Uses service_role key for full access
     fn upload_to_supabase(&self, file_path: &str, content: &str) -> Result<String, String> {
         let config = self.secrets.config();
         
-        // Supabase Storage REST API endpoint
         let url = format!(
             "{}/storage/v1/object/{}/{}",
             config.supabase_url, config.supabase_bucket, file_path
         );
         
         let mut headers = HashMap::new();
-        // Use service_role key for both apikey and Authorization
         headers.insert("apikey".to_string(), config.supabase_service_key.clone());
         headers.insert("Authorization".to_string(), format!("Bearer {}", config.supabase_service_key));
         headers.insert("Content-Type".to_string(), "application/json".to_string());
-        headers.insert("x-upsert".to_string(), "true".to_string()); // Upsert mode
+        headers.insert("x-upsert".to_string(), "true".to_string());
         
-        // Use POST for Supabase Storage upload
         match HttpClient::request(&url, HttpMethod::Post)
             .headers(headers)
             .body(content.to_string())
@@ -186,20 +165,17 @@ impl RegulatoryReportsContractState {
         {
             Ok(response) => {
                 let resp_text = response.text();
-                // Debug: Show response in storage_path
                 let debug_resp = if resp_text.len() > 80 {
                     format!("{}...", &resp_text[..80])
                 } else {
                     resp_text.clone()
                 };
                 
-                // Check for errors
                 if resp_text.contains("\"error\"") || resp_text.contains("\"statusCode\"") {
                     Ok(format!("ERR|{}|{}", debug_resp.replace("\"", "'"), file_path))
                 } else if resp_text.is_empty() {
                     Ok(format!("EMPTY|{}", file_path))
                 } else {
-                    // Success
                     Ok(format!("OK|{}|{}", debug_resp.replace("\"", "'"), file_path))
                 }
             },
@@ -209,7 +185,6 @@ impl RegulatoryReportsContractState {
         }
     }
 
-    /// Get public URL for a file in Supabase Storage
     fn get_public_url(&self, file_path: &str) -> String {
         let config = self.secrets.config();
         format!(
@@ -218,25 +193,18 @@ impl RegulatoryReportsContractState {
         )
     }
 
-    /// Get signed URL for private file access (simplified - returns public URL)
     #[allow(dead_code)]
     fn get_signed_url(&self, file_path: &str, _expires_in: u64) -> Result<String, String> {
-        // For now, just return the public URL
-        // Proper S3 signed URL would require AWS signature generation
         Ok(self.get_public_url(file_path))
     }
 
-    /// Get current timestamp (mock)
     fn get_current_timestamp(&self) -> u64 {
-        1737225600000 // 2026-01-18 mock timestamp
+        1737225600000
     }
-
-    /// Get current date string
     fn get_current_date(&self) -> String {
         "2026-01-13".to_string()
     }
 
-    /// Generate a unique report ID
     fn generate_report_id(&mut self, prefix: &str) -> String {
         self.report_counter += 1;
         format!("{}-2026-{:04}", prefix, self.report_counter)
@@ -338,6 +306,33 @@ impl RegulatoryReportsContractState {
         
         partial.to_string()
     }
+
+    fn push_history(&self, method_name: &str, params: &str, result_summary: &str, status: &str, entity_id: &str, symbol: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let entry = serde_json::json!({
+            "id": format!("HIST-reports-{}-{}", method_name, self.report_counter),
+            "timestamp": 0u64,
+            "source_mcp": "regulatory_reports",
+            "method_name": method_name,
+            "params": params,
+            "result_summary": result_summary,
+            "status": status,
+            "entity_id": entity_id,
+            "symbol": symbol
+        });
+
+        let args = serde_json::json!({ "entry": entry }).to_string();
+        
+        let _ = weil_rs::runtime::Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_history".to_string(),
+            Some(args),
+        );
+    }
 }
 
 // ===== CONTRACT IMPLEMENTATION =====
@@ -405,16 +400,14 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let timestamp = self.get_current_timestamp();
         let config = self.secrets.config();
         
-        // Cross-contract call: Get entity name from Entity Relationship MCP
         let entity_name = {
             let entity_mcp = EntityRelationshipMcp::new(config.entity_relationship_contract_id.clone());
             match entity_mcp.get_entity(resolved_entity.clone()) {
                 Ok(entity) => entity.name,
-                Err(_) => format!("Entity {}", resolved_entity), // Fallback
+                Err(_) => format!("Entity {}", resolved_entity),
             }
         };
         
-        // Cross-contract call: Get anomalies for investigation summary from Anomaly Detection MCP
         let (investigation_summary, risk_score) = {
             let anomaly_mcp = AnomalyDetectionMcp::new(config.anomaly_detection_contract_id.clone());
             match anomaly_mcp.scan_entity_anomalies(resolved_entity.clone()) {
@@ -433,11 +426,10 @@ impl RegulatoryReports for RegulatoryReportsContractState {
                 Err(_) => (
                     "Detailed investigation reveals suspicious trading patterns before corporate announcements.".to_string(),
                     85u32
-                ), // Fallback
+                ),
             }
         };
         
-        // Create STR report with real data from cross-contract calls
         let str_report = STRReport {
             str_id: str_id.clone(),
             report_date: report_date.clone(),
@@ -453,7 +445,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
             generated_at: timestamp,
         };
         
-        // Serialize and upload to Supabase Storage
         let content = serde_json::to_string_pretty(&str_report)
             .map_err(|e| format!("Failed to serialize STR: {}", e))?;
         
@@ -462,11 +453,19 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         
         let download_url = self.get_public_url(&file_path);
         
-        // Add to pending STRs
         self.pending_strs.push(str_report);
         
         self.update_cache("generate_str", &resolved_entity, "", &resolved_case, &str_id, 
             &format!("Generated STR for {} in case {}", resolved_entity, resolved_case));
+        
+        self.push_history(
+            "generate_str",
+            &format!("case={}, entity={}, type={}", resolved_case, resolved_entity, suspicious_activity_type),
+            &format!("report_id={}, risk={}", str_id, risk_score),
+            "SUCCESS",
+            &resolved_entity,
+            "",
+        );
         
         Ok(ReportResult {
             report_id: str_id,
@@ -486,21 +485,19 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let timestamp = self.get_current_timestamp();
         let config = self.secrets.config();
         
-        // Cross-contract call: Get surveillance stats from Dashboard MCP
         let (total_alerts, investigations_opened, investigations_closed, open_cases) = {
             let dashboard_mcp = DashboardMcp::new(config.dashboard_contract_id.clone());
             match dashboard_mcp.get_stats() {
                 Ok(stats) => (
                     stats.total_alerts_today,
                     stats.total_workflows_today,
-                    stats.open_cases / 2, // Approximation for closed
+                    stats.open_cases / 2, 
                     stats.open_cases,
                 ),
-                Err(_) => (156, 8, 5, 10), // Fallback
+                Err(_) => (156, 8, 5, 10), 
             }
         };
         
-        // Cross-contract call: Get live alerts breakdown from Dashboard MCP
         let (critical_alerts, manipulation_cases, insider_cases) = {
             let dashboard_mcp = DashboardMcp::new(config.dashboard_contract_id.clone());
             match dashboard_mcp.get_live_alerts("CRITICAL".to_string(), 100) {
@@ -601,34 +598,30 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let timestamp = self.get_current_timestamp();
         let config = self.secrets.config();
         
-        // Cross-contract call: Get entity risk profile from Risk Scoring MCP
         let risk_profile = {
             let risk_mcp = RiskScoringMcp::new(config.risk_scoring_contract_id.clone());
             match risk_mcp.calculate_entity_risk(resolved_entity.clone(), 30) {
                 Ok(profile) => Some(profile),
-                Err(_) => None, // Fallback below
+                Err(_) => None,
             }
         };
         
-        // Cross-contract call: Get relationships from Entity Relationship MCP
         let connected_entities = {
             let entity_mcp = EntityRelationshipMcp::new(config.entity_relationship_contract_id.clone());
             match entity_mcp.get_connected_entities(resolved_entity.clone(), 2) {
                 Ok(connections) => connections.len() as u32,
-                Err(_) => 2, // Fallback
+                Err(_) => 2,
             }
         };
         
-        // Cross-contract call: Get recent alerts from Dashboard MCP
         let recent_alerts = {
             let dashboard_mcp = DashboardMcp::new(config.dashboard_contract_id.clone());
             match dashboard_mcp.get_entity_alerts(resolved_entity.clone(), 10) {
                 Ok(alerts) => alerts.len() as u32,
-                Err(_) => 5, // Fallback
+                Err(_) => 5,
             }
         };
         
-        // Build risk factors from cross-contract data or fallback
         let (overall_risk_score, insider_risk, manipulation_risk, aml_risk) = match risk_profile {
             Some(ref profile) => (
                 profile.overall_score,
@@ -636,7 +629,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
                 profile.manipulation_risk,
                 profile.aml_risk,
             ),
-            None => (72, 65, 80, 55), // Fallback values
+            None => (72, 65, 80, 55), 
         };
         
         let recommendation = if overall_risk_score >= 80 {
@@ -779,7 +772,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let resolved_str = self.resolve_report(&str_id);
         let timestamp = self.get_current_timestamp();
         
-        // Remove from pending (mark as submitted)
         self.pending_strs.retain(|s| s.str_id != resolved_str);
         
         self.update_cache("submit_str", "", "", "", &resolved_str, 
@@ -804,7 +796,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let timestamp = self.get_current_timestamp();
         let config = self.secrets.config();
         
-        // Cross-contract call: Get case details from Dashboard MCP
         let (case_status, subject_entity, risk_score) = {
             let dashboard_mcp = DashboardMcp::new(config.dashboard_contract_id.clone());
             match dashboard_mcp.get_case_details(resolved_case.clone()) {
@@ -817,7 +808,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
             }
         };
         
-        // Cross-contract call: Get anomalies for findings from Anomaly Detection MCP
         let findings = {
             let anomaly_mcp = AnomalyDetectionMcp::new(config.anomaly_detection_contract_id.clone());
             match anomaly_mcp.scan_entity_anomalies(subject_entity.clone()) {
@@ -838,7 +828,7 @@ impl RegulatoryReports for RegulatoryReportsContractState {
                     "Unusual trading pattern detected 2 days before announcement".to_string(),
                     "Connected entities identified through graph analysis".to_string(),
                     "UPSI access confirmed before trading".to_string(),
-                ], // Fallback
+                ], 
             }
         };
         
@@ -871,7 +861,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         });
         
         if include_evidence {
-            // Cross-contract call: Get related Jira ticket if any
             let jira_link = {
                 let jira_mcp = JiraMcp::new(config.jira_contract_id.clone());
                 match jira_mcp.get_ticket(format!("SURV-{}", resolved_case)) {
@@ -921,7 +910,6 @@ impl RegulatoryReports for RegulatoryReportsContractState {
         let resolved_report = self.resolve_report(&report_id);
         let timestamp = self.get_current_timestamp();
         
-        // Determine report type and path from ID prefix
         let (report_type, file_path) = if resolved_report.starts_with("STR") {
             ("STR", format!("str/{}.json", resolved_report))
         } else if resolved_report.starts_with("SURV") {

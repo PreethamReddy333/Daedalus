@@ -1,12 +1,7 @@
-//! Cross-contract bindings for Surveillance Dashboard
-//!
-//! Provides proxy methods to call the deployed Surveillance Dashboard contract.
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use weil_rs::runtime::Runtime;
 
-/// Proxy struct for Surveillance Dashboard cross-contract calls
 pub struct DashboardMcp {
     contract_id: String,
 }
@@ -79,7 +74,6 @@ pub struct RiskEntity {
 }
 
 impl DashboardMcp {
-    /// Get surveillance statistics
     pub fn get_stats(&self) -> Result<SurveillanceStats> {
         let serialized_args = None;
 
@@ -92,7 +86,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get cases by status
     pub fn get_cases_by_status(&self, status: String, limit: u32) -> Result<Vec<CaseRecord>> {
         #[derive(Debug, Serialize)]
         struct GetCasesByStatusArgs {
@@ -114,7 +107,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get live alerts with severity filter
     pub fn get_live_alerts(&self, severity_filter: String, limit: u32) -> Result<Vec<Alert>> {
         #[derive(Debug, Serialize)]
         struct GetLiveAlertsArgs {
@@ -136,7 +128,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get workflow execution history
     pub fn get_workflow_history(&self, workflow_type: String, limit: u32) -> Result<Vec<WorkflowExecution>> {
         #[derive(Debug, Serialize)]
         struct GetWorkflowHistoryArgs {
@@ -158,7 +149,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get high-risk entities
     pub fn get_high_risk_entities(&self, min_risk_score: u32, limit: u32) -> Result<Vec<RiskEntity>> {
         #[derive(Debug, Serialize)]
         struct GetHighRiskEntitiesArgs {
@@ -180,7 +170,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get specific case details
     pub fn get_case_details(&self, case_id: String) -> Result<CaseRecord> {
         #[derive(Debug, Serialize)]
         struct GetCaseDetailsArgs {
@@ -198,7 +187,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Push a new alert to the dashboard
     pub fn push_alert(&self, alert: Alert) -> Result<String> {
         #[derive(Debug, Serialize)]
         struct PushAlertArgs {
@@ -216,7 +204,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Upsert a case record
     pub fn upsert_case(&self, case_record: CaseRecord) -> Result<String> {
         #[derive(Debug, Serialize)]
         struct UpsertCaseArgs {
@@ -234,7 +221,6 @@ impl DashboardMcp {
         Ok(resp)
     }
 
-    /// Get entity alerts
     pub fn get_entity_alerts(&self, entity_id: String, limit: u32) -> Result<Vec<Alert>> {
         #[derive(Debug, Serialize)]
         struct GetEntityAlertsArgs {

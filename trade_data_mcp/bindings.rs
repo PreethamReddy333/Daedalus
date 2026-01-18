@@ -94,6 +94,10 @@ trait TradeData {
     async fn get_top_traders(&mut self, symbol: String, limit: u32) -> Result<Vec<AccountActivity>, String>;
     async fn get_large_orders(&mut self, min_value: u64) -> Result<Vec<Trade>, String>;
     async fn get_account_profile(&mut self, account_id: String) -> Result<Vec<AccountActivity>, String>;
+    async fn plot_price_history(&self, symbols: String, days_back: u32) -> Result<Plottable, String>;
+    async fn plot_volume_chart(&self, symbols: String, days_back: u32) -> Result<Plottable, String>;
+    async fn plot_buy_sell_ratio(&self, symbol: String) -> Result<Plottable, String>;
+    async fn plot_top_traders(&self, symbol: String, limit: u32) -> Result<Plottable, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
 }
@@ -162,6 +166,26 @@ impl TradeData for TradeDataContractState {
 
     #[mutate]
     async fn get_account_profile(&mut self, account_id: String) -> Result<Vec<AccountActivity>, String> {
+        unimplemented!();
+    }
+
+    #[query(plottable)]
+    async fn plot_price_history(&self, symbols: String, days_back: u32) -> Result<Plottable, String> {
+        unimplemented!();
+    }
+
+    #[query(plottable)]
+    async fn plot_volume_chart(&self, symbols: String, days_back: u32) -> Result<Plottable, String> {
+        unimplemented!();
+    }
+
+    #[query(plottable)]
+    async fn plot_buy_sell_ratio(&self, symbol: String) -> Result<Plottable, String> {
+        unimplemented!();
+    }
+
+    #[query(plottable)]
+    async fn plot_top_traders(&self, symbol: String, limit: u32) -> Result<Plottable, String> {
         unimplemented!();
     }
 
@@ -368,6 +392,97 @@ impl TradeData for TradeDataContractState {
         },
         "required": [
           "account_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "plot_price_history",
+      "description": "===== PLOTTABLE CHART METHODS =====\nThese methods return charts that Icarus renders visually\nPlot price history for one or more symbols (comma-separated)\nReturns an interactive price chart\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbols": {
+            "type": "string",
+            "description": "Stock symbols (comma-separated, e.g., \"IBM, AAPL, GOOGL\")\n"
+          },
+          "days_back": {
+            "type": "integer",
+            "description": "Number of days of history (default: 30)\n"
+          }
+        },
+        "required": [
+          "symbols",
+          "days_back"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "plot_volume_chart",
+      "description": "Plot volume comparison for one or more symbols\nReturns a volume bar chart\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbols": {
+            "type": "string",
+            "description": "Stock symbols (comma-separated)\n"
+          },
+          "days_back": {
+            "type": "integer",
+            "description": "Number of days of history (default: 7)\n"
+          }
+        },
+        "required": [
+          "symbols",
+          "days_back"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "plot_buy_sell_ratio",
+      "description": "Plot buy vs sell volume for a symbol\nReturns a pie/bar chart showing buy/sell ratio\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock symbol\n"
+          }
+        },
+        "required": [
+          "symbol"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "plot_top_traders",
+      "description": "Plot top traders activity for a symbol\nReturns a bar chart of top account volumes\n",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Stock symbol\n"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Number of top traders to show (default: 10)\n"
+          }
+        },
+        "required": [
+          "symbol",
+          "limit"
         ]
       }
     }

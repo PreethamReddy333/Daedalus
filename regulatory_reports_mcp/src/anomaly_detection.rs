@@ -1,12 +1,7 @@
-//! Cross-contract bindings for Anomaly Detection MCP
-//!
-//! Provides proxy methods to call the deployed Anomaly Detection MCP contract.
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use weil_rs::runtime::Runtime;
 
-/// Proxy struct for Anomaly Detection MCP cross-contract calls
 pub struct AnomalyDetectionMcp {
     contract_id: String,
 }
@@ -59,7 +54,6 @@ pub struct PumpDumpIndicator {
 }
 
 impl AnomalyDetectionMcp {
-    /// Run full anomaly scan for an entity
     pub fn scan_entity_anomalies(&self, entity_id: String) -> Result<Vec<AnomalyResult>> {
         #[derive(Debug, Serialize)]
         struct ScanEntityAnomaliesArgs {
@@ -77,7 +71,6 @@ impl AnomalyDetectionMcp {
         Ok(resp)
     }
 
-    /// Detect Pump & Dump schemes for a symbol
     pub fn detect_pump_dump(&self, symbol: String, time_window_minutes: u32) -> Result<PumpDumpIndicator> {
         #[derive(Debug, Serialize)]
         struct DetectPumpDumpArgs {
@@ -99,7 +92,6 @@ impl AnomalyDetectionMcp {
         Ok(resp)
     }
 
-    /// Detect wash trading between two entities
     pub fn detect_wash_trading(
         &self,
         entity_id: String,
@@ -131,7 +123,6 @@ impl AnomalyDetectionMcp {
         Ok(resp)
     }
 
-    /// Detect spoofing patterns in an order
     pub fn detect_spoofing(
         &self,
         order_id: String,
@@ -163,7 +154,6 @@ impl AnomalyDetectionMcp {
         Ok(resp)
     }
 
-    /// Analyze volume anomalies
     pub fn analyze_volume_anomaly(&self, symbol: String, interval: String) -> Result<AnomalyResult> {
         #[derive(Debug, Serialize)]
         struct AnalyzeVolumeAnomalyArgs {

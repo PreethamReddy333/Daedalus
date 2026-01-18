@@ -71,6 +71,19 @@ pub struct RiskEntity {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct HistoryEntry {
+    pub id: String,
+    pub timestamp: u64,
+    pub source_mcp: String,
+    pub method_name: String,
+    pub params: String,
+    pub result_summary: String,
+    pub status: String,
+    pub entity_id: String,
+    pub symbol: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Trade {
     pub trade_id: String,
     pub symbol: String,
@@ -170,6 +183,8 @@ trait DashboardWebserver {
     async fn update_workflow_progress(&mut self, workflow_id: String, steps_completed: u32, status: String, result_summary: String) -> Result<String, String>;
     async fn upsert_case(&mut self, case_record: CaseRecord) -> Result<String, String>;
     async fn register_risk_entity(&mut self, entity: RiskEntity) -> Result<String, String>;
+    async fn push_history(&mut self, entry: HistoryEntry) -> Result<String, String>;
+    async fn get_history(&self, source_mcp: Option<String>, limit: Option<u32>) -> Result<Vec<HistoryEntry>, String>;
     async fn get_live_alerts(&self, severity_filter: Option<String>, limit: Option<u32>) -> Result<Vec<Alert>, String>;
     async fn get_workflow_history(&self, workflow_type: Option<String>, limit: Option<u32>) -> Result<Vec<WorkflowExecution>, String>;
     async fn get_cases_by_status(&self, status: Option<String>, limit: Option<u32>) -> Result<Vec<CaseRecord>, String>;
@@ -253,6 +268,16 @@ impl DashboardWebserver for DashboardWebserverContractState {
 
     #[mutate]
     async fn register_risk_entity(&mut self, entity: RiskEntity) -> Result<String, String> {
+        unimplemented!();
+    }
+
+    #[mutate]
+    async fn push_history(&mut self, entry: HistoryEntry) -> Result<String, String> {
+        unimplemented!();
+    }
+
+    #[query]
+    async fn get_history(&self, source_mcp: Option<String>, limit: Option<u32>) -> Result<Vec<HistoryEntry>, String> {
         unimplemented!();
     }
 

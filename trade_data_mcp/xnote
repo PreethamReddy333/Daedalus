@@ -1,5 +1,10 @@
 deploy -e -f /Users/preetham/Documents/demoo/trade_data_mcp/target/wasm32-unknown-unknown/release/trade_data_mcp.wasm -p /Users/preetham/Documents/demoo/trade_data_mcp/trade_data.widl -c /Users/preetham/Documents/demoo/trade_data_mcp/config.yaml
 
-{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"dc6662d03404aae648a3483456554ab0aa30a71d2d31a9ee16a1569b62ed6eeb","block_height":1122755,"contract_address":"aaaaaaybdqd7sq2cm5hupegidzcbjdosu7aumux2rvggp7apzi3zycouwy","creation_time":"2026-01-16T12:24:45Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaazzmud224llfiupzgy753pllt536fcx5j5a6udy3o47m5erchrqyi"}
+{"batch_author":"p-guw1m-4.us-west1.main.weilliptic.net-8000","batch_id":"b1e1bd41d39ecae8bd299d271a78eeeef728852918e31e110214fccf285df714","block_height":352463,"contract_address":"aaaaaa7ycnpwxv2xks67l4lkczhwgbyawt34u7esvsbfgbnq7putxnvmfm","creation_time":"2026-01-18T01:57:24Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa2d5kltvutfz2us2cfhs6d5ea6flnvbttetwdgpnpw3qjrhch44ou"}
+
 
 Weilliptic$$$> 
+
+
+upgrade -u aaaaaa7ycnpwxv2xks67l4lkczhwgbyawt34u7esvsbfgbnq7putxnvmfm -f /Users/preetham/Documents/demoo/trade_data_mcp/target/wasm32-unknown-unknown/release/trade_data_mcp.wasm -p /Users/preetham/Documents/demoo/trade_data_mcp/trade_data.widl -c /Users/preetham/Documents/demoo/trade_data_mcp/config.yaml
+

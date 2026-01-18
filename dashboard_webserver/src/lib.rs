@@ -1,4 +1,4 @@
-// Cross-contract proxy modules
+
 mod trade_data;
 mod entity_relationship;
 mod upsi_database;
@@ -13,7 +13,6 @@ use weil_rs::collections::vec::WeilVec;
 use weil_rs::config::Secrets;
 use weil_rs::webserver::WebServer;
 
-// Re-export types from cross-contract modules for use in trait signatures
 pub use trade_data::{Trade, TradeAnalysis, TradeDataProxy};
 pub use entity_relationship::{Entity, Relationship, InsiderStatus, EntityRelationshipProxy};
 pub use upsi_database::{UPSIRecord, TradingWindowStatus, UPSIDatabaseProxy};
@@ -91,8 +90,6 @@ pub struct RiskEntity {
     pub last_alert_at: u64,
 }
 
-// NOTE: External types (Trade, Entity, etc.) are now imported from cross-contract modules above
-
 // ===== TRAIT DEFINITION (Unified) =====
 
 trait DashboardWebserver {
@@ -139,7 +136,6 @@ trait DashboardWebserver {
 pub struct DashboardWebserverContractState {
     secrets: Secrets<DashboardConfig>,
     
-    // Logic State
     alerts: WeilVec<Alert>,
     workflows: WeilVec<WorkflowExecution>,
     cases: WeilVec<CaseRecord>,
@@ -147,7 +143,6 @@ pub struct DashboardWebserverContractState {
     alert_count_today: u32,
     workflow_count_today: u32,
 
-    // Webserver State
     server: WebServer,
     weil_id_generator: WeilIdGenerator,
 }
@@ -496,7 +491,6 @@ impl DashboardWebserver for DashboardWebserverContractState {
         let proxy = regulatory_reports::RegulatoryReportsProxy::new(contract_id);
         
         if report_type == "surveillance" {
-            // Parse params for surveillance report
             let parsed: serde_json::Value = serde_json::from_str(&params)
                 .map_err(|e| format!("Invalid params: {}", e))?;
             let from_date = parsed["from_date"].as_str().unwrap_or("").to_string();
@@ -522,7 +516,6 @@ impl DashboardWebserver for DashboardWebserverContractState {
 
     #[mutate]
     fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String> {
-        // Use generator for proper unique IDs per file
         self.server.start_file_upload(self.weil_id_generator.next_id(), path, total_chunks)
     }
 

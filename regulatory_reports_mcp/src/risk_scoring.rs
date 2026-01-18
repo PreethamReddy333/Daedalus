@@ -1,12 +1,8 @@
-//! Cross-contract bindings for Risk Scoring MCP
-//!
-//! Provides proxy methods to call the deployed Risk Scoring MCP contract.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use weil_rs::runtime::Runtime;
 
-/// Proxy struct for Risk Scoring MCP cross-contract calls
 pub struct RiskScoringMcp {
     contract_id: String,
 }
@@ -56,7 +52,6 @@ pub struct PatternRiskResult {
 }
 
 impl RiskScoringMcp {
-    /// Calculate risk score for an entity (trader/company)
     pub fn calculate_entity_risk(&self, entity_id: String, days_back: u32) -> Result<EntityRiskProfile> {
         #[derive(Debug, Serialize)]
         struct CalculateEntityRiskArgs {
@@ -78,7 +73,6 @@ impl RiskScoringMcp {
         Ok(resp)
     }
 
-    /// Get risk factors breakdown for a score
     pub fn get_risk_factors(&self, target_id: String, target_type: String) -> Result<Vec<RiskFactor>> {
         #[derive(Debug, Serialize)]
         struct GetRiskFactorsArgs {
@@ -100,7 +94,6 @@ impl RiskScoringMcp {
         Ok(resp)
     }
 
-    /// Evaluate trading pattern for manipulation
     pub fn evaluate_pattern_risk(
         &self,
         pattern_type: String,
@@ -132,7 +125,6 @@ impl RiskScoringMcp {
         Ok(resp)
     }
 
-    /// Get aggregated risk for a stock symbol
     pub fn get_symbol_risk(&self, symbol: String, as_of_timestamp: u64) -> Result<RiskScore> {
         #[derive(Debug, Serialize)]
         struct GetSymbolRiskArgs {

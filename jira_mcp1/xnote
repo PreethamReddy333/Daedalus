@@ -1,7 +1,10 @@
 -e -f /Users/preetham/documents/demoo/jira_mcp/target/wasm32-unknown-unknown/release/jira_mcp.wasm -p /Users/preetham/documents/demoo/jira_mcp/jira_mcp.widl -c /Users/preetham/documents/demoo/jira_mcp/config.yaml
 
 deploy -e -f /Users/preetham/Documents/demoo/jira_mcp1/target/wasm32-unknown-unknown/release/jira_mcp1.wasm -p /Users/preetham/Documents/demoo/jira_mcp1/jira_mcp.widl -c /Users/preetham/Documents/demoo/jira_mcp/config.yaml
-{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"048bc54bb5ea7a02c80ed45e60b280d28d66be75a9b320a84aba119fa43ad7a4","block_height":1102534,"contract_address":"aaaaaa5mpjlone64bhnyns2omhbmozg4mw3ez3xx64tjwu2tgtt2bmdunu","creation_time":"2026-01-16T11:51:01Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa2hwrvps67do4bo6zn2hja4fbokugombq7mufxwu7myd3wdarastu"}
+
+{"batch_author":"p-guw1m-4.us-west1.main.weilliptic.net-8000","batch_id":"e46dfed5c8e050316a4edfc8dec681cc4fd9460a7d425c49e36f58cf29fa1d46","block_height":5427,"contract_address":"aaaaaaz5hqfunhcpxhwzf5nplsgtxaydfgupn5u2at47tkz2igw7ipaya4","creation_time":"2026-01-17T16:11:19Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa54tv532taxcwtrkx2ueuqphfpyyscgfdqi7go4mjfojeisynjcz4"}
+
+upgrade -u aaaaaaz5hqfunhcpxhwzf5nplsgtxaydfgupn5u2at47tkz2igw7ipaya4 -f /Users/preetham/Documents/demoo/jira_mcp1/target/wasm32-unknown-unknown/release/jira_mcp1.wasm -p /Users/preetham/Documents/demoo/jira_mcp1/jira_mcp.widl -c /Users/preetham/Documents/demoo/jira_mcp/config.yaml
 
     #[query]
     fn tools(&self) -> String {

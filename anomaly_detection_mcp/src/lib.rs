@@ -1,11 +1,4 @@
-//! # Anomaly Detection MCP Server
-//!
-//! Detects market manipulation patterns using Alpha Vantage and TAAPI.IO.
-//! Analyzes spoofs, wash trades, pump & dumps, and volume anomalies.
-//!
-//! ## External Services:
-//! - **Alpha Vantage**: Price data, RSI, global market status
-//! - **TAAPI.IO**: Advanced technical indicators, volume analysis
+
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -102,7 +95,6 @@ trait AnomalyDetection {
     fn prompts(&self) -> String;
 }
 
-// Alert struct for dashboard push
 #[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
 pub struct Alert {
     pub id: String,
@@ -143,14 +135,12 @@ pub struct AnomalyDetectionContractState {
 }
 
 impl AnomalyDetectionContractState {
-    /// Get standard headers for HTTP requests (following Icarus pattern)
     fn get_headers(&self) -> HashMap<String, String> {
         HashMap::from([
             ("Content-Type".to_string(), "application/json".to_string()),
         ])
     }
 
-    /// Make an HTTP GET request with proper headers (Icarus-compatible pattern)
     async fn make_request(
         &self,
         url: &str,
@@ -219,18 +209,13 @@ impl AnomalyDetectionContractState {
         Ok(rsi.value)
     }
 
-    /// Update the query cache with a new query entry (only if unique)
     fn update_cache(&mut self, method_name: &str, entity_id: &str, symbol: &str, prompt: &str) {
-        // Check if this entity+symbol combination already exists in cache
         let already_exists = self.query_cache.recent_queries.iter()
             .any(|q| q.entity_id == entity_id && q.symbol == symbol);
         
-        // Only add to cache if it's a NEW unique combination
         if !already_exists {
-            // Use query count as sequence number
             let timestamp = self.query_cache.recent_queries.len() as u64 + 1;
             
-            // Add to recent queries (keep last 10)
             if self.query_cache.recent_queries.len() >= 10 {
                 self.query_cache.recent_queries.remove(0);
             }
@@ -243,7 +228,6 @@ impl AnomalyDetectionContractState {
             });
         }
         
-        // Always update last entity/symbol for recency tracking
         if !entity_id.is_empty() {
             self.query_cache.last_entity_id = entity_id.to_string();
         }
@@ -288,37 +272,29 @@ impl AnomalyDetectionContractState {
     /// Resolve a partial symbol reference from cache using fuzzy matching
     /// "RELI" → "RELIANCE", "bank" → "HDFCBANK"
     fn resolve_symbol(&self, partial: &str) -> String {
-        // If empty, use last symbol from cache
         if partial.is_empty() {
             return self.query_cache.last_symbol.clone();
         }
         
         let partial_lower = partial.to_lowercase();
         
-        // First check last symbol (most likely match)
         if self.query_cache.last_symbol.to_lowercase().contains(&partial_lower) {
             return self.query_cache.last_symbol.clone();
         }
         
-        // Search through cached queries for fuzzy match
         for query in self.query_cache.recent_queries.iter().rev() {
             if !query.symbol.is_empty() && query.symbol.to_lowercase().contains(&partial_lower) {
                 return query.symbol.clone();
             }
         }
         
-        // No match found, return original
         partial.to_string()
     }
 
-    /// Cross-parameter resolution: Find a cache entry matching ANY input param,
-    /// then return BOTH entity_id and symbol from that same entry.
-    /// This allows: "RELI" → returns ("Mukesh Ambani", "RELIANCE.BSE") if they were cached together
     fn resolve_from_cache(&self, entity_partial: &str, symbol_partial: &str) -> (String, String) {
         let entity_lower = entity_partial.to_lowercase();
         let symbol_lower = symbol_partial.to_lowercase();
         
-        // Search through cached queries for a match on EITHER entity OR symbol
         for query in self.query_cache.recent_queries.iter().rev() {
             let entity_matches = !entity_partial.is_empty() && 
                 !query.entity_id.is_empty() && 
@@ -328,7 +304,6 @@ impl AnomalyDetectionContractState {
                 !query.symbol.is_empty() && 
                 query.symbol.to_lowercase().contains(&symbol_lower);
             
-            // If EITHER matches, return BOTH from this cache entry
             if entity_matches || symbol_matches {
                 let resolved_entity = if query.entity_id.is_empty() {
                     self.resolve_entity(entity_partial)
@@ -345,7 +320,6 @@ impl AnomalyDetectionContractState {
                 return (resolved_entity, resolved_symbol);
             }
             
-            // Also check natural language prompt for matches
             let prompt_lower = query.natural_language_prompt.to_lowercase();
             if (!entity_partial.is_empty() && prompt_lower.contains(&entity_lower)) ||
                (!symbol_partial.is_empty() && prompt_lower.contains(&symbol_lower)) {
@@ -365,11 +339,9 @@ impl AnomalyDetectionContractState {
             }
         }
         
-        // No cross-match found, fall back to individual resolution
         (self.resolve_entity(entity_partial), self.resolve_symbol(symbol_partial))
     }
 
-    /// Push alert to surveillance dashboard via cross-contract call if anomaly detected
     fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
         let config = self.secrets.config();
         if config.dashboard_contract_id.is_empty() {
@@ -388,12 +360,110 @@ impl AnomalyDetectionContractState {
             timestamp: 0, 
         };
 
-        // Wrap the alert in a JSON object with the parameter name "alert"
         let args = serde_json::json!({ "alert": alert }).to_string();
         
         let _ = Runtime::call_contract::<String>(
             config.dashboard_contract_id.clone(),
             "push_alert".to_string(),
+            Some(args),
+        );
+    }
+
+    fn push_history(&self, method_name: &str, params: &str, result_summary: &str, status: &str, entity_id: &str, symbol: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let entry = serde_json::json!({
+            "id": format!("HIST-anomaly-{}-{}", method_name, 0u64),
+            "timestamp": 0u64,
+            "source_mcp": "anomaly_detection",
+            "method_name": method_name,
+            "params": params,
+            "result_summary": result_summary,
+            "status": status,
+            "entity_id": entity_id,
+            "symbol": symbol
+        });
+
+        let args = serde_json::json!({ "entry": entry }).to_string();
+        
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "push_history".to_string(),
+            Some(args),
+        );
+    }
+
+    fn log_workflow(&self, workflow_id: &str, workflow_type: &str, trigger: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let args = serde_json::json!({
+            "workflow_id": workflow_id,
+            "workflow_type": workflow_type,
+            "trigger": trigger,
+            "total_steps": 3u32
+        }).to_string();
+        
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "log_workflow_start".to_string(),
+            Some(args),
+        );
+    }
+
+    fn create_case(&self, case_type: &str, entity_id: &str, symbol: &str, risk_score: u32, summary: &str) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() {
+            return;
+        }
+
+        let case = serde_json::json!({
+            "case_id": format!("CASE-{}-{}", case_type, 0u64),
+            "case_type": case_type,
+            "status": "OPEN",
+            "priority": if risk_score >= 80 { "CRITICAL" } else if risk_score >= 60 { "HIGH" } else { "MEDIUM" },
+            "subject_entity": entity_id,
+            "symbol": symbol,
+            "risk_score": risk_score,
+            "assigned_to": "Unassigned",
+            "created_at": 0u64,
+            "updated_at": 0u64,
+            "summary": summary
+        });
+
+        let args = serde_json::json!({ "case_record": case }).to_string();
+        
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "upsert_case".to_string(),
+            Some(args),
+        );
+    }
+
+    fn register_risk(&self, entity_id: &str, entity_name: &str, risk_score: u32) {
+        let config = self.secrets.config();
+        if config.dashboard_contract_id.is_empty() || risk_score < 70 {
+            return; 
+        }
+
+        let entity = serde_json::json!({
+            "entity_id": entity_id,
+            "entity_name": entity_name,
+            "risk_score": risk_score,
+            "alert_count": 1u32,
+            "last_alert_at": 0u64
+        });
+
+        let args = serde_json::json!({ "entity": entity }).to_string();
+        
+        let _ = Runtime::call_contract::<String>(
+            config.dashboard_contract_id.clone(),
+            "register_risk_entity".to_string(),
             Some(args),
         );
     }
@@ -492,35 +562,33 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         })
     }
 
-    /// Get context from recent queries to resolve ambiguous references
     #[mutate]
     async fn get_context(&mut self) -> QueryContext {
         self.query_cache.clone()
     }
 
-    /// Detect spoofing patterns
     #[mutate]
     async fn detect_spoofing(&mut self, order_id: String, entity_id: String, symbol: String, order_details: String) -> Result<SpoofingIndicator, String> {
-        // Cross-parameter resolution: if one matches, get both from same cache entry
         let (resolved_entity, resolved_symbol) = self.resolve_from_cache(&entity_id, &symbol);
         
-        // Update cache with resolved values
         self.update_cache("detect_spoofing", &resolved_entity, &resolved_symbol, 
             &format!("Check spoofing for order {} by {} on {}", order_id, resolved_entity, resolved_symbol));
         
-        // Real implementation would need Order Book data (Level 2)
-        // For demo, we check if order size is unusually large compared to current volume from Alpha Vantage
         
         let quote = self.get_quote(&resolved_symbol).await?;
         
         let market_volume: u64 = quote.volume.parse().unwrap_or(10000);
         
-        // Simple heuristic: If order details mention huge quantity (simulated parsing)
         let is_large_order = order_details.contains("qty: 50000") || order_details.contains("large");
         
-        let is_spoof = is_large_order && market_volume < 100000; // Large relative to market
+        let is_spoof = is_large_order && market_volume < 100000; 
         
-        // Push alert to dashboard if spoofing detected
+        self.log_workflow(
+            &format!("WF-SPOOF-{}", order_id),
+            "SPOOFING_DETECTION",
+            &format!("Order {} check", order_id),
+        );
+        
         if is_spoof {
             self.maybe_push_alert(
                 "SPOOFING",
@@ -530,6 +598,14 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &resolved_symbol,
                 &format!("Spoofing detected: Order {} has high cancellation rate and large size vs market", order_id),
             );
+            self.create_case(
+                "SPOOFING",
+                &resolved_entity,
+                &resolved_symbol,
+                75,
+                &format!("Potential spoofing on order {}", order_id),
+            );
+            self.register_risk(&resolved_entity, &format!("Entity {}", resolved_entity), 75);
         } else {
             self.maybe_push_alert(
                 "SPOOFING_CHECK",
@@ -540,6 +616,15 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &format!("Spoofing check passed for order {}", order_id),
             );
         }
+        
+        self.push_history(
+            "detect_spoofing",
+            &format!("order_id={}, entity_id={}, symbol={}", order_id, resolved_entity, resolved_symbol),
+            &format!("is_spoof={}", is_spoof),
+            if is_spoof { "ALERT" } else { "OK" },
+            &resolved_entity,
+            &resolved_symbol,
+        );
         
         Ok(SpoofingIndicator {
             order_id,
@@ -553,10 +638,9 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     /// Detect wash trading
     #[mutate]
     async fn detect_wash_trading(&mut self, entity_id: String, counterparty_id: String, symbol: String, trade_timestamp: u64) -> Result<WashTradeIndicator, String> {
-        // Cross-parameter resolution
-        // Try to resolve entity and symbol together first
+        
         let (resolved_entity, resolved_symbol) = self.resolve_from_cache(&entity_id, &symbol);
-        // Then resolve counterparty separately (or against symbol)
+        
         let (resolved_counterparty, _) = self.resolve_from_cache(&counterparty_id, &symbol);
         
         // Update cache
@@ -565,6 +649,13 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         
         // Wash trading = Entity trading with itself or collider
         let is_same_entity = resolved_entity == resolved_counterparty;
+        
+        // Log workflow
+        self.log_workflow(
+            &format!("WF-WASH-{}-{}", resolved_entity, resolved_counterparty),
+            "WASH_TRADING_DETECTION",
+            &format!("Check {} vs {}", resolved_entity, resolved_counterparty),
+        );
         
         if is_same_entity {
             self.maybe_push_alert(
@@ -575,6 +666,15 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &resolved_symbol,
                 &format!("Wash trading detected: {} trading with itself/collider {}", resolved_entity, resolved_counterparty),
             );
+            self.create_case(
+                "WASH_TRADING",
+                &resolved_entity,
+                &resolved_symbol,
+                80,
+                &format!("Wash trade between {} and {}", resolved_entity, resolved_counterparty),
+            );
+            // Register high-risk
+            self.register_risk(&resolved_entity, &format!("Entity {}", resolved_entity), 80);
         } else {
             self.maybe_push_alert(
                 "WASH_TRADING_CHECK",
@@ -585,6 +685,16 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &format!("Wash trading check passed between {} and {}", resolved_entity, resolved_counterparty),
             );
         }
+        
+        // Push history
+        self.push_history(
+            "detect_wash_trading",
+            &format!("entity={}, counterparty={}, symbol={}", resolved_entity, resolved_counterparty, resolved_symbol),
+            &format!("is_wash_trade={}", is_same_entity),
+            if is_same_entity { "ALERT" } else { "OK" },
+            &resolved_entity,
+            &resolved_symbol,
+        );
         
         Ok(WashTradeIndicator {
             entity_id: resolved_entity,
@@ -636,6 +746,16 @@ impl AnomalyDetection for AnomalyDetectionContractState {
             );
         }
         
+        // Push history
+        self.push_history(
+            "detect_pump_dump",
+            &format!("symbol={}, window={}min", resolved_symbol, time_window_minutes),
+            &format!("is_pump_dump={}, change={}%", is_pump, change_pct),
+            if is_pump { "ALERT" } else { "OK" },
+            "",
+            &resolved_symbol,
+        );
+        
         Ok(PumpDumpIndicator {
             symbol: resolved_symbol,
             is_pump_dump: is_pump,
@@ -685,6 +805,16 @@ impl AnomalyDetection for AnomalyDetectionContractState {
             );
         }
         
+        // Push history
+        self.push_history(
+            "detect_front_running",
+            &format!("entity={}, symbol={}, gap={}s", resolved_entity, resolved_symbol, diff),
+            &format!("is_suspicious={}", is_suspicious),
+            if is_suspicious { "ALERT" } else { "OK" },
+            &resolved_entity,
+            &resolved_symbol,
+        );
+        
         Ok(AnomalyResult {
             entity_id: resolved_entity,
             symbol: resolved_symbol,
@@ -696,13 +826,10 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         })
     }
 
-    /// Analyze volume anomalies using Alpha Vantage
     #[mutate]
     async fn analyze_volume_anomaly(&mut self, symbol: String, interval: String) -> Result<AnomalyResult, String> {
-        // Resolve partial symbol from cache
         let resolved_symbol = self.resolve_symbol(&symbol);
         
-        // Update cache with resolved value
         self.update_cache("analyze_volume_anomaly", "", &resolved_symbol, 
             &format!("Check volume anomaly on {} with {} interval", resolved_symbol, interval));
         
@@ -732,6 +859,16 @@ impl AnomalyDetection for AnomalyDetectionContractState {
             );
         }
         
+        // Push history
+        self.push_history(
+            "analyze_volume_anomaly",
+            &format!("symbol={}, interval={}", resolved_symbol, interval),
+            &format!("volume={}, is_anomaly={}", volume, is_anomaly),
+            if is_anomaly { "ALERT" } else { "OK" },
+            "MARKET",
+            &resolved_symbol,
+        );
+        
         Ok(AnomalyResult {
             entity_id: "MARKET".to_string(),
             symbol: resolved_symbol,
@@ -743,13 +880,10 @@ impl AnomalyDetection for AnomalyDetectionContractState {
         })
     }
 
-    /// Calculate RSI to check overbought/oversold conditions (TAAPI.IO)
     #[mutate]
     async fn check_rsi_levels(&mut self, symbol: String) -> Result<String, String> {
-        // Resolve partial symbol from cache
         let resolved_symbol = self.resolve_symbol(&symbol);
         
-        // Update cache with resolved value
         self.update_cache("check_rsi_levels", "", &resolved_symbol, 
             &format!("Check RSI levels for {}", resolved_symbol));
         
@@ -764,6 +898,14 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &resolved_symbol,
                 &format!("RSI Overbought: {:.2} > 70", rsi),
             );
+            self.push_history(
+                "check_rsi_levels",
+                &format!("symbol={}", resolved_symbol),
+                &format!("RSI={:.2}, status=OVERBOUGHT", rsi),
+                "ALERT",
+                "MARKET",
+                &resolved_symbol,
+            );
             Ok(format!("{} is OVERBOUGHT (RSI: {:.2})", resolved_symbol, rsi))
         } else if rsi < 30.0 {
             self.maybe_push_alert(
@@ -773,6 +915,14 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 "MARKET",
                 &resolved_symbol,
                 &format!("RSI Oversold: {:.2} < 30", rsi),
+            );
+            self.push_history(
+                "check_rsi_levels",
+                &format!("symbol={}", resolved_symbol),
+                &format!("RSI={:.2}, status=OVERSOLD", rsi),
+                "ALERT",
+                "MARKET",
+                &resolved_symbol,
             );
             Ok(format!("{} is OVERSOLD (RSI: {:.2})", resolved_symbol, rsi))
         } else {
@@ -784,18 +934,22 @@ impl AnomalyDetection for AnomalyDetectionContractState {
                 &resolved_symbol,
                 &format!("RSI Normal: {:.2}", rsi),
             );
+            self.push_history(
+                "check_rsi_levels",
+                &format!("symbol={}", resolved_symbol),
+                &format!("RSI={:.2}, status=NEUTRAL", rsi),
+                "OK",
+                "MARKET",
+                &resolved_symbol,
+            );
             Ok(format!("{} is NEUTRAL (RSI: {:.2})", resolved_symbol, rsi))
         }
     }
 
-    /// Run full anomaly scan for an entity
     #[query]
     async fn scan_entity_anomalies(&self, entity_id: String) -> Result<Vec<AnomalyResult>, String> {
-        // Resolve partial entity reference from cache
         let resolved_entity = self.resolve_entity(&entity_id);
         
-        // In production, this would aggregate results from multiple detection methods
-        // For now, return empty with the resolved entity noted
         Ok(vec![])
     }
 
@@ -806,7 +960,7 @@ impl AnomalyDetection for AnomalyDetectionContractState {
     "type": "function",
     "function": {
       "name": "get_context",
-      "description": "IMPORTANT: Call this FIRST before any other method. Returns recent query history with entity_ids, symbols, and natural language prompts to help resolve ambiguous user references like 'that trader', 'same stock', etc.\n",
+      "description": "DO NOT CALL THIS - internal test function only.\n",
       "parameters": {
         "type": "object",
         "properties": {},

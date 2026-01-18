@@ -3,15 +3,15 @@
 # Generates reports and uploads to Supabase Storage
 
 # REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-dashboard_contract_id: "aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga"
+dashboard_contract_id: "aaaaaayrd3bsxvttmltgyzjr34uzesbbqqzris3dlvskwh3asoj7s4xnsu"
 
 # REQUIRED: Contract ID of the jira_mcp for case/ticket management
-jira_contract_id: "aaaaaa22qx66rbpoh6ak2mmjfb5kc2ryjnoqzp33ujzi73u3aze5wkij7e"
+jira_contract_id: "aaaaaaz5hqfunhcpxhwzf5nplsgtxaydfgupn5u2at47tkz2igw7ipaya4"
 
 # REQUIRED: Contract IDs for cross-MCP calls
 risk_scoring_contract_id: ""
-anomaly_detection_contract_id: "aaaaaay3luxuojcss2b7lptxckmhydqkatcinoiogzuep66itps6ntv7pe"
-entity_relationship_contract_id: "aaaaaa5nb5t5cgg7nrintzf56dpmb3otezf3hycr47mbwocei5zwm5h4gm"
+anomaly_detection_contract_id: "aaaaaa4s4a4xuzmfsxs5gbs3hcm7npikux3jah52oq6rvnty63jw7qpoam"
+entity_relationship_contract_id: "aaaaaa36wpz26hhxrmyvo2clmpqqkwqudoqkymfkgltfmtvoceftcfes5u"
 
 # Supabase Storage REST API Configuration
 supabase_url: "https://gmjhagtqxczsfitnfztg.supabase.co"

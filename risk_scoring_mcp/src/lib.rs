@@ -1,15 +1,4 @@
-//! # Risk Scoring MCP Server
-//!
-//! Calculates risk scores for trades, entities, and patterns.
-//! Can push high-risk alerts to the Dashboard via cross-contract calls.
-//!
-//! ## Risk Scoring Model:
-//! - Volume anomaly: 0-25 points (based on volume vs 30-day avg)
-//! - Pre-announcement trading: 0-30 points (if within 30 days before announcement)
-//! - Connected entity: 0-25 points (if account connected to insider)
-//! - Trade size: 0-10 points (large trades get higher scores)
-//! - Historical alerts: 0-10 points (based on past alerts for entity)
-//!
+
 //! ## Risk Levels:
 //! - 0-30: LOW
 //! - 31-60: MEDIUM
@@ -68,7 +57,6 @@ pub struct PatternRiskResult {
     pub risk_score: u32,
 }
 
-// Alert struct for cross-contract call to Dashboard
 #[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
 pub struct Alert {
     pub id: String,
@@ -106,7 +94,6 @@ pub struct RiskScoringContractState {
 // ===== HELPER METHODS =====
 
 impl RiskScoringContractState {
-    /// Determine risk level from score
     fn get_risk_level(&self, score: u32) -> String {
         let config = self.secrets.config();
         let high_threshold = config.high_risk_threshold.parse::<u32>().unwrap_or(70);
@@ -123,7 +110,6 @@ impl RiskScoringContractState {
         }
     }
     
-    /// Generate recommendation based on risk level
     fn get_recommendation(&self, risk_level: &str) -> String {
         match risk_level {
             "CRITICAL" => "Immediate investigation required. Escalate to compliance head.".to_string(),
@@ -133,7 +119,6 @@ impl RiskScoringContractState {
         }
     }
     
-    /// Push alert to Dashboard if risk is high
     async fn maybe_push_alert(&self, risk_score: &RiskScore, entity_id: &str, symbol: &str, trade_id: &str) -> Result<(), String> {
         if risk_score.risk_level == "HIGH" || risk_score.risk_level == "CRITICAL" {
             let config = self.secrets.config();
@@ -151,7 +136,7 @@ impl RiskScoringContractState {
                     symbol: symbol.to_string(),
                     description: risk_score.recommendation.clone(),
                     workflow_id: "".to_string(),
-                    timestamp: 0, // Would use Runtime::timestamp()
+                    timestamp: 0,
                 };
                 
                 let args = serde_json::to_string(&alert).unwrap();
@@ -180,7 +165,6 @@ impl RiskScoring for RiskScoringContractState {
         })
     }
 
-    /// Calculate risk score for a trade
     #[query]
     async fn calculate_trade_risk(
         &self, 
@@ -197,7 +181,6 @@ impl RiskScoring for RiskScoringContractState {
         let mut factors = Vec::new();
         let mut total_score: u32 = 0;
         
-        // Factor 1: Volume anomaly (0-25 points)
         let vol_ratio = volume_ratio.parse::<f64>().unwrap_or(1.0);
         let volume_score = if vol_ratio > 5.0 {
             25
@@ -218,7 +201,6 @@ impl RiskScoring for RiskScoringContractState {
             total_score += volume_score;
         }
         
-        // Factor 2: Pre-announcement trading (0-30 points)
         let is_pre = is_pre_announcement.to_lowercase() == "true";
         if is_pre {
             let pre_score = 30u32;
@@ -231,7 +213,6 @@ impl RiskScoring for RiskScoringContractState {
             total_score += pre_score;
         }
         
-        // Factor 3: Connected entity (0-25 points)
         let is_connected = is_connected_entity.to_lowercase() == "true";
         if is_connected {
             let connected_score = 25u32;
@@ -244,7 +225,6 @@ impl RiskScoring for RiskScoringContractState {
             total_score += connected_score;
         }
         
-        // Factor 4: Trade size (0-10 points)
         let price_val = price.parse::<f64>().unwrap_or(0.0);
         let trade_value = quantity as f64 * price_val;
         let size_score = if trade_value > 10_000_000.0 {
@@ -266,8 +246,6 @@ impl RiskScoring for RiskScoringContractState {
             total_score += size_score;
         }
         
-        // Factor 5: Trade direction during price movement (0-10 points)
-        // This would require price history, using placeholder logic
         let direction_score = if is_pre && trade_type == "BUY" { 10 } else { 0 };
         if direction_score > 0 {
             factors.push(RiskFactor {
@@ -279,7 +257,6 @@ impl RiskScoring for RiskScoringContractState {
             total_score += direction_score;
         }
         
-        // Ensure score is capped at 100
         total_score = total_score.min(100);
         
         let risk_level = self.get_risk_level(total_score);
@@ -292,17 +269,13 @@ impl RiskScoring for RiskScoringContractState {
             recommendation,
         };
         
-        // Push alert to dashboard if high risk
         let _ = self.maybe_push_alert(&risk_score, &account_id, &symbol, &trade_id).await;
         
         Ok(risk_score)
     }
 
-    /// Calculate entity-level risk profile
     #[query]
     async fn calculate_entity_risk(&self, entity_id: String, _days_back: u32) -> Result<EntityRiskProfile, String> {
-        // In production, this would call Trade Data MCP and aggregate scores
-        // Using placeholder logic for demo
         
         Ok(EntityRiskProfile {
             entity_id,
@@ -315,7 +288,6 @@ impl RiskScoring for RiskScoringContractState {
         })
     }
 
-    /// Evaluate trading pattern for manipulation
     #[query]
     async fn evaluate_pattern_risk(
         &self, 
@@ -327,23 +299,19 @@ impl RiskScoring for RiskScoringContractState {
         let trades: Vec<String> = trade_ids.split(',').map(|s| s.trim().to_string()).collect();
         let accounts: Vec<String> = account_ids.split(',').map(|s| s.trim().to_string()).collect();
         
-        // Different pattern detection logic
+        
         let (confidence, risk_score) = match pattern_type.as_str() {
             "SPOOFING" => {
-                // Check for large order cancellations
                 (75, 80)
             },
             "WASH_TRADE" => {
-                // Check for circular trades between related accounts
                 let is_wash = accounts.len() >= 2;
                 if is_wash { (85, 90) } else { (20, 30) }
             },
             "CIRCULAR" => {
-                // Check for trades that return to original account
                 (60, 70)
             },
             "PUMP_DUMP" => {
-                // Check for coordinated buying followed by selling
                 (70, 75)
             },
             _ => (0, 0),
@@ -358,7 +326,6 @@ impl RiskScoring for RiskScoringContractState {
         })
     }
 
-    /// Evaluate insider trading risk
     #[query]
     async fn evaluate_insider_risk(
         &self, 
@@ -370,7 +337,6 @@ impl RiskScoring for RiskScoringContractState {
         let mut factors = Vec::new();
         let mut total_score: u32 = 0;
         
-        // Factor 1: Trading before announcement
         let timing_score = if lookback_days <= 7 { 40 } else if lookback_days <= 14 { 30 } else if lookback_days <= 30 { 20 } else { 10 };
         factors.push(RiskFactor {
             factor_name: "Pre-Announcement Timing".to_string(),
@@ -380,7 +346,6 @@ impl RiskScoring for RiskScoringContractState {
         });
         total_score += timing_score;
         
-        // Factor 2: Profitability (placeholder - would need price data)
         let profit_score = 25;
         factors.push(RiskFactor {
             factor_name: "Post-Announcement Profit".to_string(),
@@ -390,7 +355,6 @@ impl RiskScoring for RiskScoringContractState {
         });
         total_score += profit_score;
         
-        // Factor 3: Unusual pattern
         let pattern_score = 15;
         factors.push(RiskFactor {
             factor_name: "Unusual Trading Pattern".to_string(),
@@ -411,16 +375,14 @@ impl RiskScoring for RiskScoringContractState {
             recommendation,
         };
         
-        // Push alert
         let _ = self.maybe_push_alert(&risk_score, &account_id, &symbol, &format!("INSIDER-{}", account_id)).await;
         
         Ok(risk_score)
     }
 
-    /// Get risk factors breakdown
     #[query]
     async fn get_risk_factors(&self, _target_id: String, target_type: String) -> Result<Vec<RiskFactor>, String> {
-        // Return example factors based on target type
+
         let factors = if target_type == "TRADE" {
             vec![
                 RiskFactor { factor_name: "Volume Anomaly".to_string(), factor_weight: 25, factor_value: "3.5x normal".to_string(), contribution: 20 },
@@ -436,10 +398,8 @@ impl RiskScoring for RiskScoringContractState {
         Ok(factors)
     }
 
-    /// Get aggregated risk for a symbol
     #[query]
     async fn get_symbol_risk(&self, symbol: String, _as_of_timestamp: u64) -> Result<RiskScore, String> {
-        // Aggregate symbol-level risk
         let factors = vec![
             RiskFactor {
                 factor_name: "Volume Spike".to_string(),
@@ -473,7 +433,6 @@ impl RiskScoring for RiskScoringContractState {
         })
     }
 
-    /// Returns JSON schema of available tools
     #[query]
     fn tools(&self) -> String {
         r#"[

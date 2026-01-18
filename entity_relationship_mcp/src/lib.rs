@@ -1,17 +1,3 @@
-//! # Entity Relationship MCP Server
-//!
-//! Maps relationships between entities using Neo4j Aura graph database.
-//! Critical for insider trading detection - identifies connected entities.
-//!
-//! ## External Service: Neo4j Aura (Free tier)
-//! - Graph database optimized for relationship queries
-//! - Uses Cypher query language via HTTP API
-//! - Supports multi-hop relationship traversal
-//!
-//! ## Context Cache Feature:
-//! - Implements fuzzy resolution for entity_id and company_symbol
-//! - Cross-parameter resolution: if one param matches cache, related params are auto-filled
-//! - Helps Icarus resolve ambiguous prompts like "that entity", "same company", etc.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -88,7 +74,6 @@ pub struct QueryContext {
     pub last_company_symbol: String,
 }
 
-// Alert struct for dashboard push
 #[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
 pub struct Alert {
     pub id: String,
@@ -289,7 +274,6 @@ impl EntityRelationshipContractState {
         partial.to_string()
     }
 
-    /// Cross-parameter resolution
     fn resolve_from_cache(&self, entity_partial: &str, company_partial: &str) -> (String, String) {
         let entity_lower = entity_partial.to_lowercase();
         let company_lower = company_partial.to_lowercase();
@@ -323,7 +307,6 @@ impl EntityRelationshipContractState {
         (self.resolve_entity(entity_partial), self.resolve_company(company_partial))
     }
 
-    /// Push alert to surveillance dashboard via cross-contract call
     fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
         let config = self.secrets.config();
         if config.dashboard_contract_id.is_empty() {
@@ -351,7 +334,6 @@ impl EntityRelationshipContractState {
     }
 }
 
-/// Simple base64 encoding for auth
 fn base64_encode(input: &str) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let bytes = input.as_bytes();
@@ -607,8 +589,7 @@ impl EntityRelationship for EntityRelationshipContractState {
                         designation: row[4].as_str().unwrap_or("").to_string(),
                         window_status: row[5].as_str().unwrap_or("OPEN").to_string(),
                     };
-                    
-                    // Push alert if confirmed insider
+                    ˀ
                     if status.is_insider {
                         self.maybe_push_alert(
                             "INSIDER_CONFIRMED",

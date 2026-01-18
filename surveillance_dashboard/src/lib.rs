@@ -1,13 +1,3 @@
-//! # Surveillance Dashboard Applet
-//!
-//! Central state store for the Capital Market Surveillance Platform.
-//! This applet receives data from all MCPs via cross-contract calls
-//! and provides query interface for the frontend UI.
-//!
-//! ## Architecture
-//! - Other MCPs call mutate functions via `call_contract`
-//! - Frontend UI calls query functions directly
-//! - State is stored in WeilVec (WeilMap is not iterable, so we use WeilVec with manual indexing)
 
 use serde::{Deserialize, Serialize};
 use weil_macros::{constructor, mutate, query, smart_contract, WeilType};
@@ -102,8 +92,7 @@ trait SurveillanceDashboard {
     async fn get_entity_alerts(&self, entity_id: String, limit: Option<u32>) -> Result<Vec<Alert>, String>;
     fn tools(&self) -> String;
     fn prompts(&self) -> String;
-    
-    // Webserver methods for static asset hosting
+  
     fn start_file_upload(&mut self, path: String, total_chunks: u32) -> Result<(), String>;
     fn add_path_content(&mut self, path: String, chunk: Vec<u8>, index: u32) -> Result<(), String>;
     fn finish_upload(&mut self, path: String, size_bytes: u32) -> Result<(), String>;
@@ -114,24 +103,16 @@ trait SurveillanceDashboard {
 }
 
 // ===== CONTRACT STATE =====
-// Note: Using WeilVec for all collections since WeilMap is not iterable
 
 #[derive(Serialize, Deserialize, WeilType)]
 pub struct SurveillanceDashboardContractState {
-    /// Config secrets
     secrets: Secrets<DashboardConfig>,
-    /// All alerts stored in order of arrival
     alerts: WeilVec<Alert>,
-    /// All workflow executions
     workflows: WeilVec<WorkflowExecution>,
-    /// Cases stored in WeilVec (upsert by scanning)
     cases: WeilVec<CaseRecord>,
-    /// High-risk entities stored in WeilVec
     risk_entities: WeilVec<RiskEntity>,
-    /// Running counters for stats
     alert_count_today: u32,
     workflow_count_today: u32,
-    /// WebServer for hosting static assets
     server: WebServer,
 }
 
@@ -140,7 +121,6 @@ pub struct SurveillanceDashboardContractState {
 #[smart_contract]
 impl SurveillanceDashboard for SurveillanceDashboardContractState {
     
-    /// Initialize empty dashboard state
     #[constructor]
     fn new() -> Result<Self, String>
     where
@@ -160,7 +140,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
 
     // ===== MUTATE FUNCTIONS (Called by other MCPs) =====
 
-    /// Push a new alert
     #[mutate]
     async fn push_alert(&mut self, alert: Alert) -> Result<String, String> {
         let alert_id = alert.id.clone();
@@ -169,7 +148,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(alert_id)
     }
 
-    /// Log workflow start
     #[mutate]
     async fn log_workflow_start(
         &mut self, 
@@ -194,7 +172,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(workflow_id)
     }
 
-    /// Update workflow progress
     #[mutate]
     async fn update_workflow_progress(
         &mut self, 
@@ -218,11 +195,9 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Err(format!("Workflow {} not found", workflow_id))
     }
 
-    /// Upsert a case record
     #[mutate]
     async fn upsert_case(&mut self, case_record: CaseRecord) -> Result<String, String> {
         let case_id = case_record.case_id.clone();
-        // Check if case exists and update
         let len = self.cases.len();
         for i in 0..len {
             if let Some(existing) = self.cases.get(i) {
@@ -232,16 +207,13 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
                 }
             }
         }
-        // Not found, insert new
         self.cases.push(case_record);
         Ok(case_id)
     }
 
-    /// Register or update a high-risk entity
     #[mutate]
     async fn register_risk_entity(&mut self, entity: RiskEntity) -> Result<String, String> {
         let entity_id = entity.entity_id.clone();
-        // Check if entity exists and update
         let len = self.risk_entities.len();
         for i in 0..len {
             if let Some(existing) = self.risk_entities.get(i) {
@@ -251,14 +223,12 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
                 }
             }
         }
-        // Not found, insert new
         self.risk_entities.push(entity);
         Ok(entity_id)
     }
 
     // ===== QUERY FUNCTIONS (Called by Frontend UI) =====
 
-    /// Get live alerts with optional severity filter
     #[query]
     async fn get_live_alerts(&self, severity_filter: Option<String>, limit: Option<u32>) -> Result<Vec<Alert>, String> {
         let filter = severity_filter.unwrap_or_else(|| "ALL".to_string());
@@ -279,7 +249,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(result)
     }
 
-    /// Get workflow execution history
     #[query]
     async fn get_workflow_history(&self, workflow_type: Option<String>, limit: Option<u32>) -> Result<Vec<WorkflowExecution>, String> {
         let wf_type = workflow_type.unwrap_or_else(|| "ALL".to_string());
@@ -300,7 +269,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(result)
     }
 
-    /// Get cases by status
     #[query]
     async fn get_cases_by_status(&self, status: Option<String>, limit: Option<u32>) -> Result<Vec<CaseRecord>, String> {
         let st = status.unwrap_or_else(|| "ALL".to_string());
@@ -321,7 +289,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(result)
     }
 
-    /// Get surveillance statistics
     #[query]
     async fn get_stats(&self) -> Result<SurveillanceStats, String> {
         let mut open_cases = 0u32;
@@ -355,7 +322,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         })
     }
 
-    /// Get high-risk entities above a threshold
     #[query]
     async fn get_high_risk_entities(&self, min_risk_score: Option<u32>, limit: Option<u32>) -> Result<Vec<RiskEntity>, String> {
         let min_score = min_risk_score.unwrap_or(70);
@@ -376,7 +342,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(result)
     }
 
-    /// Get specific case details by ID
     #[query]
     async fn get_case_details(&self, case_id: String) -> Result<CaseRecord, String> {
         let len = self.cases.len();
@@ -390,7 +355,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Err(format!("Case {} not found", case_id))
     }
 
-    /// Get alerts for a specific entity
     #[query]
     async fn get_entity_alerts(&self, entity_id: String, limit: Option<u32>) -> Result<Vec<Alert>, String> {
         let lim = limit.unwrap_or(20);
@@ -410,7 +374,6 @@ impl SurveillanceDashboard for SurveillanceDashboardContractState {
         Ok(result)
     }
 
-    /// Returns JSON schema of available tools
     #[query]
     fn tools(&self) -> String {
         r#"[

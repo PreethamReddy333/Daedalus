@@ -1,22 +1,12 @@
-/**
- * Surveillance Command Center - Dashboard Script
- * Connects to VeilChain contracts via WeilWallet
- */
-
-// ===== Contract Addresses (Updated 2026-01-17) =====
-// Using dashboard_webserver as the single Backend-for-Frontend (BFF)
-// All calls go through dashboard_webserver which proxies to other MCPs
 
 
 const CONTRACTS = {
-    // Main dashboard - handles alerts, cases, stats AND proxies to other MCPs
-    dashboard: 'aaaaaa5ubvlbxzazcstcwswneev23lgmcclraqavqk7erp6lc6k5shxe2y',
-    // Direct access kept for reference (but use dashboard proxy methods instead)
-    trade_data: 'aaaaaaybdqd7sq2cm5hupegidzcbjdosu7aumux2rvggp7apzi3zycouwy',
-    entity_relationship: 'aaaaaa5hq6wgvdbjfv74wauozxbruqau44jzzpsd652lfmdux62lfvd7ca',
-    anomaly_detection: 'aaaaaa3coddrezgqwpnjbnvpzia5nb3tg6o3jhex2nibeccuf6gqudcwc4',
-    regulatory_reports: 'aaaaaa5wldrjksipyse3sw5xmsny2ytl7n23oqeqqe7n6glapm52z7nvse',
-    slack_notifier: 'aaaaaa2c7jxhzusn7x66q3xr3fqeniqur7fm65solgyrpbii2ovz2zalr4'
+    dashboard: 'aaaaaayrd3bsxvttmltgyzjr34uzesbbqqzris3dlvskwh3asoj7s4xnsu',
+    trade_data: 'aaaaaa7ycnpwxv2xks67l4lkczhwgbyawt34u7esvsbfgbnq7putxnvmfm',
+    entity_relationship: 'aaaaaa36wpz26hhxrmyvo2clmpqqkwqudoqkymfkgltfmtvoceftcfes5u',
+    anomaly_detection: 'aaaaaa4s4a4xuzmfsxs5gbs3hcm7npikux3jah52oq6rvnty63jw7qpoam',
+    regulatory_reports: 'aaaaaa77wlohisawkkbxkgc77cb24slezi4a5yx6obqiyjcmwofwx3njfm',
+    slack_notifier: 'aaaaaa4l5izydl4rfdxv5vmxrbdtkqka5htfq55d2d6pchqcplqv5gjbma'
 };
 
 let wallet = null;
@@ -35,10 +25,8 @@ function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const panel = item.dataset.panel;
-            // Update nav
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             item.classList.add('active');
-            // Update panels
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.getElementById('panel-' + panel).classList.add('active');
         });
@@ -47,19 +35,10 @@ function setupNavigation() {
 
 // ===== Event Listeners =====
 function setupEventListeners() {
-    // Wallet
     document.getElementById('connectWallet').addEventListener('click', connectWallet);
-
-    // Alerts
     document.getElementById('refreshAlerts')?.addEventListener('click', loadAlerts);
-
-    // Cases  
     document.getElementById('refreshCases')?.addEventListener('click', loadCases);
-
-    // Entity search
     document.getElementById('searchEntity')?.addEventListener('click', searchEntity);
-
-    // Trades
     document.getElementById('searchTrades')?.addEventListener('click', searchTrades);
     document.getElementById('analyzeVolume')?.addEventListener('click', analyzeVolume);
 }
@@ -80,13 +59,11 @@ async function connectWallet() {
         wallet = window.WeilWallet;
         connected = true;
 
-        // Update UI
         document.querySelector('.status-dot').className = 'status-dot online';
         document.querySelector('.status-text').textContent = 'Connected';
         document.getElementById('connectWallet').textContent = '✓ Connected';
         document.getElementById('connectWallet').disabled = true;
 
-        // Load real data
         await loadAllData();
     } catch (error) {
         console.error('Wallet connection failed:', error);
@@ -95,7 +72,6 @@ async function connectWallet() {
 }
 
 // ===== Contract Calls =====
-// Using raw wallet.request() API for vanilla JavaScript
 
 async function callContract(contractKey, method, args = {}) {
     if (!wallet) {
@@ -112,7 +88,6 @@ async function callContract(contractKey, method, args = {}) {
     try {
         console.log(`[${new Date().toISOString()}] Calling ${contractKey}.${method} at ${address}`, args);
 
-        // Use weil_sendTransaction for contract calls
         const result = await wallet.request({
             method: 'weil_sendTransaction',
             params: {
@@ -124,22 +99,18 @@ async function callContract(contractKey, method, args = {}) {
 
         console.log(`[${new Date().toISOString()}] Raw result from ${method}:`, result);
 
-        // Result may already be parsed, or needs parsing
         let parsed = result;
         if (typeof result === 'string') {
             try {
                 parsed = JSON.parse(result);
             } catch (e) {
-                // Already a string value
             }
         }
 
-        // Handle nested JSON in Ok result
         if (parsed && parsed.Ok && typeof parsed.Ok === 'string') {
             try {
                 parsed.Ok = JSON.parse(parsed.Ok);
             } catch (e) {
-                // Value is already a plain string
             }
         }
 
@@ -251,7 +222,6 @@ async function searchEntity() {
         return;
     }
 
-    // Use dashboard proxy method instead of direct entity_relationship
     const entity = await callContract('dashboard', 'search_entities_proxy', { search_query: entityId });
     const container = document.getElementById('entityDetails');
 
@@ -275,8 +245,6 @@ async function searchEntity() {
         container.innerHTML = '<div class="empty-state">Entity not found</div>';
     }
 
-    // Load relationships
-    // Use dashboard proxy method
     const rels = await callContract('dashboard', 'get_relationships_proxy', { entity_id: entityId });
     const relContainer = document.getElementById('entityRelationships');
 
@@ -302,7 +270,6 @@ async function searchTrades() {
         return;
     }
 
-    // Use dashboard proxy method
     const result = await callContract('dashboard', 'get_trades_proxy', { symbol, limit: 20 });
     const container = document.getElementById('tradesList');
 
@@ -329,7 +296,6 @@ async function analyzeVolume() {
     const symbol = document.getElementById('symbolSearch')?.value?.toUpperCase()?.trim();
     if (!symbol) return;
 
-    // Use dashboard proxy method
     const result = await callContract('dashboard', 'analyze_volume_proxy', { symbol });
     const container = document.getElementById('tradeAnalysis');
 

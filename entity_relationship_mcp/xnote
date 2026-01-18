@@ -1,5 +1,6 @@
 deploy -e -f /Users/preetham/Documents/demoo/entity_relationship_mcp/target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm -p /Users/preetham/Documents/demoo/entity_relationship_mcp/entity_relationship.widl -c /Users/preetham/Documents/demoo/entity_relationship_mcp/config.yaml
 
-{"batch_author":"p-guw1m-1.us-west1.main.weilliptic.net-8000","batch_id":"491b8d9c804f80cdccf8b0dfeadf3a8dff76842efd65f23acf8fb7bb5a333187","block_height":1102242,"contract_address":"aaaaaa5hq6wgvdbjfv74wauozxbruqau44jzzpsd652lfmdux62lfvd7ca","creation_time":"2026-01-16T11:50:31Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaayyd42e2sbj3m6bafem4eof2axgnkunuieitwsr667x2i7uk6hohm"}
+{"batch_author":"p-guw1m-1.us-west1.main.weilliptic.net-8000","batch_id":"fe05b3a0c54f1744d9c4ffdc629cafcf6c3fd705537df520671698c9dde902d3","block_height":4857,"contract_address":"aaaaaa36wpz26hhxrmyvo2clmpqqkwqudoqkymfkgltfmtvoceftcfes5u","creation_time":"2026-01-17T16:10:22Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaaziwjt656sfceredc7jefwtl7jaacsluszhu47kmja3hhha72trha"}
 
+upgrade -u aaaaaa36wpz26hhxrmyvo2clmpqqkwqudoqkymfkgltfmtvoceftcfes5u -f /Users/preetham/Documents/demoo/entity_relationship_mcp/target/wasm32-unknown-unknown/release/entity_relationship_mcp.wasm -p /Users/preetham/Documents/demoo/entity_relationship_mcp/entity_relationship.widl -c /Users/preetham/Documents/demoo/entity_relationship_mcp/config.yaml
 

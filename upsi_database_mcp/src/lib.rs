@@ -1,16 +1,3 @@
-//! # UPSI Database MCP Server
-//!
-//! Tracks Unpublished Price Sensitive Information (UPSI) using Supabase (PostgreSQL).
-//! Logs access to UPSI and monitors trading window status.
-//!
-//! ## External Service: Supabase (PostgreSQL + REST API)
-//! - Stores UPSI records, access logs, and trading window status
-//! - Accessible via REST API with Row Level Security
-//!
-//! ## Context Cache Feature:
-//! - Implements fuzzy resolution for entity_id, company_symbol, and upsi_id
-//! - Cross-parameter resolution: if one param matches cache, related params are auto-filled
-//! - Helps Icarus resolve ambiguous prompts like "that company", "same person", etc.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -83,7 +70,6 @@ pub struct QueryContext {
     pub last_upsi_id: String,
 }
 
-// Alert struct for dashboard push
 #[derive(Debug, Serialize, Deserialize, WeilType, Clone)]
 pub struct Alert {
     pub id: String,
@@ -125,7 +111,6 @@ pub struct UPSIDatabaseContractState {
 // ===== HELPER METHODS =====
 
 impl UPSIDatabaseContractState {
-    /// Helper to make HTTP requests to Supabase
     async fn supabase_request<T: for<'de> Deserialize<'de>>(&self, endpoint: &str, method: HttpMethod, body: Option<String>) -> Result<T, String> {
         let config = self.secrets.config();
         let url = format!("{}/rest/v1/{}", config.supabase_url, endpoint);
@@ -151,17 +136,13 @@ impl UPSIDatabaseContractState {
             .map_err(|e| format!("Failed to parse Supabase response: {} - Body: {}", e, response_text))
     }
 
-    /// Update the query cache with a new query entry (only if unique)
     fn update_cache(&mut self, method_name: &str, entity_id: &str, company_symbol: &str, upsi_id: &str, prompt: &str) {
-        // Check if this entity+company+upsi combination already exists in cache
         let already_exists = self.query_cache.recent_queries.iter()
             .any(|q| q.entity_id == entity_id && q.company_symbol == company_symbol && q.upsi_id == upsi_id);
         
-        // Only add to cache if it's a NEW unique combination
         if !already_exists && (!entity_id.is_empty() || !company_symbol.is_empty() || !upsi_id.is_empty()) {
             let timestamp = self.query_cache.recent_queries.len() as u64 + 1;
             
-            // Keep last 10 entries
             if self.query_cache.recent_queries.len() >= 10 {
                 self.query_cache.recent_queries.remove(0);
             }
@@ -175,7 +156,6 @@ impl UPSIDatabaseContractState {
             });
         }
         
-        // Always update last values for recency tracking
         if !entity_id.is_empty() {
             self.query_cache.last_entity_id = entity_id.to_string();
         }
@@ -187,8 +167,6 @@ impl UPSIDatabaseContractState {
         }
     }
 
-    /// Resolve a partial entity reference from cache using fuzzy matching
-    /// "Mukesh" → "ENT-REL-001", "SUS" → "SUS-001"
     fn resolve_entity(&self, partial: &str) -> String {
         if partial.is_empty() {
             return self.query_cache.last_entity_id.clone();
@@ -196,17 +174,14 @@ impl UPSIDatabaseContractState {
         
         let partial_lower = partial.to_lowercase();
         
-        // First check last entity
         if self.query_cache.last_entity_id.to_lowercase().contains(&partial_lower) {
             return self.query_cache.last_entity_id.clone();
         }
         
-        // Search through cached queries for fuzzy match
         for query in self.query_cache.recent_queries.iter().rev() {
             if !query.entity_id.is_empty() && query.entity_id.to_lowercase().contains(&partial_lower) {
                 return query.entity_id.clone();
             }
-            // Also check natural language prompt
             if query.natural_language_prompt.to_lowercase().contains(&partial_lower) {
                 if !query.entity_id.is_empty() {
                     return query.entity_id.clone();
@@ -226,12 +201,10 @@ impl UPSIDatabaseContractState {
         
         let partial_lower = partial.to_lowercase();
         
-        // First check last company
         if self.query_cache.last_company_symbol.to_lowercase().contains(&partial_lower) {
             return self.query_cache.last_company_symbol.clone();
         }
         
-        // Search through cached queries
         for query in self.query_cache.recent_queries.iter().rev() {
             if !query.company_symbol.is_empty() && query.company_symbol.to_lowercase().contains(&partial_lower) {
                 return query.company_symbol.clone();
@@ -250,17 +223,14 @@ impl UPSIDatabaseContractState {
         
         let partial_lower = partial.to_lowercase();
         
-        // First check last upsi_id
         if self.query_cache.last_upsi_id.to_lowercase().contains(&partial_lower) {
             return self.query_cache.last_upsi_id.clone();
         }
         
-        // Search through cached queries
         for query in self.query_cache.recent_queries.iter().rev() {
             if !query.upsi_id.is_empty() && query.upsi_id.to_lowercase().contains(&partial_lower) {
                 return query.upsi_id.clone();
             }
-            // Check prompt for context
             if query.natural_language_prompt.to_lowercase().contains(&partial_lower) {
                 if !query.upsi_id.is_empty() {
                     return query.upsi_id.clone();
@@ -278,7 +248,6 @@ impl UPSIDatabaseContractState {
         let company_lower = company_partial.to_lowercase();
         let upsi_lower = upsi_partial.to_lowercase();
         
-        // Search through cached queries for a match on ANY param
         for query in self.query_cache.recent_queries.iter().rev() {
             let entity_matches = !entity_partial.is_empty() && 
                 !query.entity_id.is_empty() && 
@@ -292,7 +261,6 @@ impl UPSIDatabaseContractState {
                 !query.upsi_id.is_empty() && 
                 query.upsi_id.to_lowercase().contains(&upsi_lower);
             
-            // If ANY matches, return ALL from this cache entry
             if entity_matches || company_matches || upsi_matches {
                 let resolved_entity = if query.entity_id.is_empty() {
                     self.resolve_entity(entity_partial)
@@ -315,7 +283,6 @@ impl UPSIDatabaseContractState {
                 return (resolved_entity, resolved_company, resolved_upsi);
             }
             
-            // Also check natural language prompt
             let prompt_lower = query.natural_language_prompt.to_lowercase();
             if (!entity_partial.is_empty() && prompt_lower.contains(&entity_lower)) ||
                (!company_partial.is_empty() && prompt_lower.contains(&company_lower)) ||
@@ -328,11 +295,9 @@ impl UPSIDatabaseContractState {
             }
         }
         
-        // No cross-match found, fall back to individual resolution
         (self.resolve_entity(entity_partial), self.resolve_company(company_partial), self.resolve_upsi_id(upsi_partial))
     }
 
-    /// Push alert to surveillance dashboard via cross-contract call
     fn maybe_push_alert(&self, alert_type: &str, severity: &str, risk_score: u32, entity_id: &str, symbol: &str, description: &str) {
         let config = self.secrets.config();
         if config.dashboard_contract_id.is_empty() {
@@ -369,7 +334,6 @@ impl UPSIDatabase for UPSIDatabaseContractState {
     where
         Self: Sized,
     {
-        // Initialize with sample query histories for testing context resolution
         let sample_histories = vec![
             QueryHistory {
                 method_name: "get_active_upsi".to_string(),
@@ -424,19 +388,15 @@ impl UPSIDatabase for UPSIDatabaseContractState {
         })
     }
 
-    /// Get context from recent queries to resolve ambiguous references
     #[mutate]
     async fn get_context(&mut self) -> QueryContext {
         self.query_cache.clone()
     }
 
-    /// Get UPSI record by ID from Supabase
     #[mutate]
     async fn get_upsi(&mut self, upsi_id: String) -> Result<UPSIRecord, String> {
-        // Resolve partial UPSI ID
         let resolved_upsi = self.resolve_upsi_id(&upsi_id);
         
-        // Update cache
         self.update_cache("get_upsi", "", "", &resolved_upsi, 
             &format!("Get UPSI record {}", resolved_upsi));
         
@@ -447,13 +407,10 @@ impl UPSIDatabase for UPSIDatabaseContractState {
         records.into_iter().next().ok_or_else(|| format!("UPSI record {} not found", resolved_upsi))
     }
 
-    /// Get all active (non-public) UPSI for a company
     #[mutate]
     async fn get_active_upsi(&mut self, company_symbol: String) -> Result<Vec<UPSIRecord>, String> {
-        // Resolve partial company symbol
         let resolved_company = self.resolve_company(&company_symbol);
         
-        // Update cache
         self.update_cache("get_active_upsi", "", &resolved_company, "", 
             &format!("Get active UPSI for {}", resolved_company));
         
@@ -462,10 +419,9 @@ impl UPSIDatabase for UPSIDatabaseContractState {
         self.supabase_request(&endpoint, HttpMethod::Get, None).await
     }
 
-    /// Get UPSI access log for a specific UPSI
     #[mutate]
     async fn get_upsi_access_log(&mut self, upsi_id: String, from_timestamp: u64, to_timestamp: u64) -> Result<Vec<UPSIAccessLog>, String> {
-        // Resolve partial UPSI ID
+        
         let resolved_upsi = self.resolve_upsi_id(&upsi_id);
         
         // Update cache
@@ -604,7 +560,7 @@ impl UPSIDatabase for UPSIDatabaseContractState {
     "type": "function",
     "function": {
       "name": "get_context",
-      "description": "IMPORTANT: Call this FIRST before any other method. Returns recent query history with entity_ids, company_symbols, and upsi_ids to help resolve ambiguous user references like 'that company', 'same person', 'that UPSI', etc.\n",
+      "description": "DO NOT CALL THIS - internal test function only.\n",
       "parameters": {
         "type": "object",
         "properties": {},

@@ -1,18 +1,8 @@
-# Trade Data MCP Configuration
-# =============================
-# For hackathon demo: Using Alpha Vantage with global stocks (IBM, AAPL, MSFT, etc.)
-# This demonstrates surveillance capabilities - in production would use NSE/BSE data
 
-# REQUIRED: Contract ID of the deployed surveillance_dashboard applet
-dashboard_contract_id: "aaaaaa425yj6nyqxta4t7rctn6av6mm7hjvmf2vm2sxemiomdw4e4ggaga"
+dashboard_contract_id: "aaaaaayrd3bsxvttmltgyzjr34uzesbbqqzris3dlvskwh3asoj7s4xnsu"
 
-# Alpha Vantage API Keys (get free key from https://www.alphavantage.co/support/#api-key)
-# Multiple keys help avoid rate limits (25 requests/day per key on free tier)
-api_key_1: "OZSNBTPM4T64S1VH"
-api_key_2: "G9B4T6Y2Q08QD1HM"
-api_key_3: "S0BNFA6IUBH3EK6U"
+api_key_1: "PWXZBVWCQK3FF7QS"
+api_key_2: "XMYOEIC669QVPJ9I"
+api_key_3: "8UCNPK1ZZNVYRJJT"
 
-# Deploy command:
-#   deploy -e -f target/wasm32-unknown-unknown/release/trade_data_mcp.wasm \
-#          -p trade_data.widl \
-#          -c config.yaml
+

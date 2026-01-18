@@ -151,5 +151,42 @@ interface TradeData {
     mutate func get_account_profile(
         // Trading account ID - supports fuzzy matching
         account_id: string
-    ) -> result<list<AccountActivity>, string>
+    ) -> result<list<AccountActivity>, string>;
+
+    // ===== PLOTTABLE CHART METHODS =====
+    // These methods return charts that Icarus renders visually
+
+    // Plot price history for one or more symbols (comma-separated)
+    // Returns an interactive price chart
+    query func plot_price_history(
+        // Stock symbols (comma-separated, e.g., "IBM, AAPL, GOOGL")
+        symbols: string,
+        // Number of days of history (default: 30)
+        days_back: u32
+    ) -> result<plottable, string>;
+
+    // Plot volume comparison for one or more symbols
+    // Returns a volume bar chart
+    query func plot_volume_chart(
+        // Stock symbols (comma-separated)
+        symbols: string,
+        // Number of days of history (default: 7)
+        days_back: u32
+    ) -> result<plottable, string>;
+
+    // Plot buy vs sell volume for a symbol
+    // Returns a pie/bar chart showing buy/sell ratio
+    query func plot_buy_sell_ratio(
+        // Stock symbol
+        symbol: string
+    ) -> result<plottable, string>;
+
+    // Plot top traders activity for a symbol
+    // Returns a bar chart of top account volumes
+    query func plot_top_traders(
+        // Stock symbol
+        symbol: string,
+        // Number of top traders to show (default: 10)
+        limit: u32
+    ) -> result<plottable, string>
 }

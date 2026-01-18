@@ -1,13 +1,8 @@
-/**
- * Surveillance Command Center - Dashboard Script
- * Uses Weil SDK bindings for proper wallet communication
- */
 
 import { DashboardWebserver } from './bindings';
 import { WeilWalletConnection } from '@weilliptic/weil-sdk';
 
-// Contract address - update this with your deployed contract
-const DASHBOARD_CONTRACT_ID = 'aaaaaa75usb5abovzcm5fn6uhxkzsfmsaur5mktbszcezkcq4n3os4bnfy';
+const DASHBOARD_CONTRACT_ID = 'aaaaaayrd3bsxvttmltgyzjr34uzesbbqqzris3dlvskwh3asoj7s4xnsu';
 
 let wallet: WeilWalletConnection | null = null;
 let dashboard: ReturnType<typeof DashboardWebserver> | null = null;
@@ -26,10 +21,8 @@ function setupNavigation() {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const panel = (item as HTMLElement).dataset.panel;
-            // Update nav
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             item.classList.add('active');
-            // Update panels
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.getElementById('panel-' + panel)?.classList.add('active');
         });
@@ -38,19 +31,10 @@ function setupNavigation() {
 
 // ===== Event Listeners =====
 function setupEventListeners() {
-    // Wallet
     document.getElementById('connectWallet')?.addEventListener('click', connectWallet);
-
-    // Alerts
     document.getElementById('refreshAlerts')?.addEventListener('click', loadAlerts);
-
-    // Cases  
     document.getElementById('refreshCases')?.addEventListener('click', loadCases);
-
-    // Entity search
     document.getElementById('searchEntity')?.addEventListener('click', searchEntity);
-
-    // Trades
     document.getElementById('searchTrades')?.addEventListener('click', searchTrades);
     document.getElementById('analyzeVolume')?.addEventListener('click', analyzeVolume);
 }
@@ -65,17 +49,14 @@ async function connectWallet() {
     }
 
     try {
-        // Create SDK wallet wrapper with the browser extension as provider
         wallet = new WeilWalletConnection({
             walletProvider: (window as any).WeilWallet,
         });
         console.log('Wallet wrapper created');
 
-        // Create the dashboard client using the generated bindings
         dashboard = DashboardWebserver(wallet, DASHBOARD_CONTRACT_ID);
         connected = true;
 
-        // Update UI
         const statusDot = document.querySelector('.status-dot');
         const statusText = document.querySelector('.status-text');
         const connectBtn = document.getElementById('connectWallet') as HTMLButtonElement;
@@ -87,7 +68,6 @@ async function connectWallet() {
             connectBtn.disabled = true;
         }
 
-        // Load real data
         await loadAllData();
     } catch (error: any) {
         console.error('Wallet connection failed:', error);
@@ -104,13 +84,22 @@ async function loadAllData() {
     ]);
 }
 
+function unwrap(data: any): any {
+    if (data && typeof data === 'object' && 'Ok' in data) {
+        return data.Ok;
+    }
+    return data;
+}
+
 async function loadStats() {
     if (!dashboard) return;
 
     try {
         console.log('Loading stats...');
-        const stats = await dashboard.get_stats();
-        console.log('Stats result:', stats);
+        let stats = await dashboard.get_stats();
+        console.log('Stats result (raw):', stats);
+        stats = unwrap(stats);
+        console.log('Stats result (unwrapped):', stats);
 
         if (stats) {
             const totalAlerts = document.getElementById('totalAlerts');
@@ -135,15 +124,18 @@ async function loadAlerts() {
         const severityFilter = (document.getElementById('alertSeverityFilter') as HTMLSelectElement)?.value || 'ALL';
         console.log('Loading alerts with filter:', severityFilter);
 
-        const alerts = await dashboard.get_live_alerts(
+        let alerts = await dashboard.get_live_alerts(
             severityFilter === 'ALL' ? undefined : severityFilter,
             20
         );
+        alerts = unwrap(alerts);
         console.log('Alerts result:', alerts);
 
         if (alerts && alerts.length > 0) {
             renderAlerts(alerts, 'alertsList');
             renderAlerts(alerts.slice(0, 5), 'recentAlerts');
+        } else {
+            renderAlerts([], 'alertsList');
         }
     } catch (error) {
         console.error('Error loading alerts:', error);
@@ -181,10 +173,11 @@ async function loadCases() {
         const statusFilter = (document.getElementById('caseStatusFilter') as HTMLSelectElement)?.value || 'ALL';
         console.log('Loading cases with filter:', statusFilter);
 
-        const cases = await dashboard.get_cases_by_status(
+        let cases = await dashboard.get_cases_by_status(
             statusFilter === 'ALL' ? undefined : statusFilter,
             20
         );
+        cases = unwrap(cases);
         console.log('Cases result:', cases);
 
         if (cases) {
@@ -229,7 +222,6 @@ async function searchEntity() {
     }
 
     try {
-        // Use dashboard proxy method
         const entities = await dashboard.search_entities_proxy(entityId);
         const container = document.getElementById('entityDetails');
 
@@ -252,7 +244,6 @@ async function searchEntity() {
                 `;
             }
 
-            // Load relationships
             const rels = await dashboard.get_relationships_proxy(e.entity_id);
             const relContainer = document.getElementById('entityRelationships');
 
@@ -287,7 +278,6 @@ async function searchTrades() {
     }
 
     try {
-        // Use dashboard proxy method
         const trades = await dashboard.get_trades_proxy(symbol, 20);
         const container = document.getElementById('tradesList');
 
@@ -320,7 +310,6 @@ async function analyzeVolume() {
     if (!symbol) return;
 
     try {
-        // Use dashboard proxy method
         const analysis = await dashboard.analyze_volume_proxy(symbol);
         const container = document.getElementById('tradeAnalysis');
 
@@ -341,7 +330,6 @@ async function analyzeVolume() {
     }
 }
 
-// ===== Demo Data (shown before wallet connection) =====
 function loadDemoData() {
     const totalAlerts = document.getElementById('totalAlerts');
     const openCases = document.getElementById('openCases');

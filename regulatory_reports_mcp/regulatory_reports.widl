@@ -1,5 +1,3 @@
-// Regulatory Reports MCP - Generates compliance reports and uploads to Supabase Storage
-// Implements context caching with fuzzy parameter resolution
 
 // ===== Configuration =====
 record RegulatoryReportsConfig {
@@ -8,7 +6,6 @@ record RegulatoryReportsConfig {
     risk_scoring_contract_id: string,
     anomaly_detection_contract_id: string,
     entity_relationship_contract_id: string,
-    // Supabase Storage REST API
     supabase_url: string,
     supabase_service_key: string,
     supabase_bucket: string,
@@ -96,10 +93,8 @@ record QueryContext {
 interface RegulatoryReports {
     config -> RegulatoryReportsConfig;
 
-    // CALL THIS FIRST - Get context from recent queries
     mutate func get_context() -> QueryContext;
 
-    // Generate Suspicious Transaction Report and upload to Supabase Storage
     mutate func generate_str(
         case_id: string,
         entity_id: string,
@@ -107,51 +102,39 @@ interface RegulatoryReports {
         suspicion_reason: string
     ) -> result<ReportResult, string>;
 
-    // Generate periodic market surveillance report
     mutate func generate_surveillance_report(
         from_date: string,
         to_date: string,
         report_type: string
     ) -> result<ReportResult, string>;
 
-    // Generate compliance scorecard for an entity
     mutate func generate_compliance_scorecard(
         entity_id: string,
         period: string
     ) -> result<ReportResult, string>;
-
-    // Generate full entity risk report
     mutate func generate_entity_risk_report(
         entity_id: string
     ) -> result<ReportResult, string>;
 
-    // Generate GSM (Graded Surveillance Measure) report
     mutate func generate_gsm_report(
         report_date: string
     ) -> result<ReportResult, string>;
-
-    // Generate ESM (Enhanced Surveillance Measure) report
     mutate func generate_esm_report(
         report_date: string
     ) -> result<ReportResult, string>;
 
-    // Get pending STRs awaiting submission
     mutate func get_pending_strs(
         limit: u32
     ) -> result<list<STRReport>, string>;
-
-    // Submit STR to regulatory authority
     mutate func submit_str(
         str_id: string
     ) -> result<ReportResult, string>;
 
-    // Generate investigation report with evidence
     mutate func generate_investigation_report(
         case_id: string,
         include_evidence: bool
     ) -> result<ReportResult, string>;
 
-    // Get download URL for a previously generated report
     mutate func get_report_url(
         report_id: string
     ) -> result<ReportResult, string>

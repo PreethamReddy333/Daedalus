@@ -1,5 +1,3 @@
-// Risk Scoring MCP - Calculates risk scores for trades, entities, and patterns
-// Pushes high-risk alerts to the Dashboard via cross-contract calls
 
 // ===== Configuration =====
 record RiskScoringConfig {
@@ -49,78 +47,44 @@ record PatternRiskResult {
 interface RiskScoring {
     config -> RiskScoringConfig;
 
-    // Calculate risk score for a trade given its context
-    // Returns a 0-100 score with risk level and factors
     query func calculate_trade_risk(
-        // Trade ID to evaluate
         trade_id: string,
-        // Stock symbol
         symbol: string,
-        // Trading account ID
         account_id: string,
-        // Trade type: BUY or SELL
         trade_type: string,
-        // Trade quantity
         quantity: u64,
-        // Trade price
         price: string,
-        // Volume ratio vs 30-day average (e.g., "3.5")
         volume_ratio: string,
-        // Is this within 30 days before an announcement? (true/false as string)
         is_pre_announcement: string,
-        // Is the account connected to an insider? (true/false as string)
         is_connected_entity: string
     ) -> result<RiskScore, string>;
 
-    // Calculate risk score for an entity (trader/company)
-    // Aggregates multiple risk dimensions
     query func calculate_entity_risk(
-        // Entity identifier (account ID or company ID)
         entity_id: string,
-        // Number of days to analyze
         days_back: u32
     ) -> result<EntityRiskProfile, string>;
 
-    // Evaluate trading pattern for manipulation
-    // Checks for spoofing, wash trading, pump and dump patterns
     query func evaluate_pattern_risk(
-        // Pattern type: SPOOFING, WASH_TRADE, CIRCULAR, PUMP_DUMP
         pattern_type: string,
-        // Stock symbol
         symbol: string,
-        // Comma-separated list of trade IDs
         trade_ids: string,
-        // Comma-separated list of account IDs
         account_ids: string
     ) -> result<PatternRiskResult, string>;
 
-    // Check if trades indicate insider trading risk
-    // Correlates trades with UPSI access and announcements
     query func evaluate_insider_risk(
-        // Stock symbol
         symbol: string,
-        // Account ID to evaluate
         account_id: string,
-        // Announcement timestamp to check against
         announcement_timestamp: u64,
-        // Days before announcement to check
         lookback_days: u32
     ) -> result<RiskScore, string>;
 
-    // Get risk factors breakdown for a score
     query func get_risk_factors(
-        // Entity or trade ID
         target_id: string,
-        // Type: TRADE or ENTITY
         target_type: string
     ) -> result<list<RiskFactor>, string>;
 
-    // Get aggregated risk for a stock symbol
-    // Combines all risk signals for the stock
     query func get_symbol_risk(
-        // Stock symbol
         symbol: string,
-        // Timestamp for evaluation
         as_of_timestamp: u64
     ) -> result<RiskScore, string>
 }

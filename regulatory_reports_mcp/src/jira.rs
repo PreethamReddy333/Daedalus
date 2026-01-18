@@ -1,12 +1,8 @@
-//! Cross-contract bindings for Jira MCP
-//!
-//! Provides proxy methods to call the deployed Jira MCP contract.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use weil_rs::runtime::Runtime;
 
-/// Proxy struct for Jira MCP cross-contract calls
 pub struct JiraMcp {
     contract_id: String,
 }
@@ -43,7 +39,6 @@ pub struct TicketResult {
 }
 
 impl JiraMcp {
-    /// Get ticket details by key
     pub fn get_ticket(&self, ticket_key: String) -> Result<JiraTicket> {
         #[derive(Debug, Serialize)]
         struct GetTicketArgs {
@@ -61,7 +56,6 @@ impl JiraMcp {
         Ok(resp)
     }
 
-    /// Create a ticket specifically for a surveillance case
     pub fn create_case_ticket(
         &self,
         case_id: String,
@@ -93,7 +87,6 @@ impl JiraMcp {
         Ok(resp)
     }
 
-    /// Add a comment to a ticket
     pub fn add_comment(&self, ticket_key: String, comment: String) -> Result<TicketResult> {
         #[derive(Debug, Serialize)]
         struct AddCommentArgs {

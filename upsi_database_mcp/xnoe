@@ -1,3 +1,6 @@
 deploy -e -f /Users/preetham/Documents/demoo/upsi_database_mcp/target/wasm32-unknown-unknown/release/upsi_database_mcp.wasm -p /Users/preetham/Documents/demoo/upsi_database_mcp/upsi_database.widl -c /Users/preetham/Documents/demoo/upsi_database_mcp/config.yaml
 
-{"batch_author":"p-guw1m-2.us-west1.main.weilliptic.net-8000","batch_id":"4d50f8e645b6f9ad1687366fdcf2592f02a6d2ffa5b9cced5919ae11b663c11f","block_height":1123458,"contract_address":"aaaaaa2xqdbzi6oefivlpj4g2nee6vwzdnyeap4arogh5j5jf3x6vvfcfe","creation_time":"2026-01-16T12:25:55Z","method_kind":"Mutate","status":"Finalized","tx_idx":0,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa4xiqxwyupl2eteoced3ap2hequ4244kfu2nbbmejrnhpl22xwyfi"}
+{"batch_author":"p-guw1m-3.us-west1.main.weilliptic.net-8000","batch_id":"94e5111c210b3da90bc8709df1bb097bca6d40892cc85e4dc026da4134980b29","block_height":354476,"contract_address":"aaaaaa3su7z5oaqrgs7757xyzpzp4kxi4v2uyihzf6jpjtlu7kve7ifxfi","creation_time":"2026-01-18T02:00:45Z","method_kind":"Mutate","status":"Finalized","tx_idx":1,"txn_result":"{\"Ok\":\"null\"}","txn_ticket":"aaaaaa7uijimhm3fegv755ktn44pkodzw6ndmn24umldd5yg5cu4i3fq64"}
+
+upgrade -u aaaaaa3su7z5oaqrgs7757xyzpzp4kxi4v2uyihzf6jpjtlu7kve7ifxfi -f /Users/preetham/Documents/demoo/upsi_database_mcp/target/wasm32-unknown-unknown/release/upsi_database_mcp.wasm -p /Users/preetham/Documents/demoo/upsi_database_mcp/upsi_database.widl -c /Users/preetham/Documents/demoo/upsi_database_mcp/config.yaml
+

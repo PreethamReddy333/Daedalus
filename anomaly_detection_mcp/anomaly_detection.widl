@@ -1,5 +1,3 @@
-// Anomaly Detection MCP - Uses Alpha Vantage & TAAPI.IO for market pattern analysis
-// Detects spoofing, wash trading, pump & dump schemes
 
 // ===== Configuration =====
 record AnomalyDetectionConfig {
@@ -67,70 +65,44 @@ record QueryContext {
 interface AnomalyDetection {
     config -> AnomalyDetectionConfig;
 
-    // Get context from recent queries to resolve ambiguous references
     mutate func get_context() -> QueryContext;
 
-    // Detect spoofing patterns in an order using market depth data
     mutate func detect_spoofing(
-        // Order ID
         order_id: string,
-        // Entity placing the order
         entity_id: string,
-        // Symbol
         symbol: string,
-        // Order details
         order_details: string
     ) -> result<SpoofingIndicator, string>;
 
-    // Detect wash trading between two entities
     query func detect_wash_trading(
-        // First entity ID
         entity_id: string,
-        // Second entity ID
         counterparty_id: string,
-        // Symbol
         symbol: string,
-        // Trade timestamp
         trade_timestamp: u64
     ) -> result<WashTradeIndicator, string>;
 
-    // Detect Pump & Dump schemes for a symbol
     mutate func detect_pump_dump(
-        // Symbol to analyze
         symbol: string,
-        // Time window in minutes
         time_window_minutes: u32
     ) -> result<PumpDumpIndicator, string>;
 
-    // Detect potential front-running
     query func detect_front_running(
-        // Broker/Entity ID
         entity_id: string,
-        // Symbol
         symbol: string,
-        // Client trade timestamp
         client_trade_timestamp: u64,
-        // Proprietary trade timestamp
         prop_trade_timestamp: u64
     ) -> result<AnomalyResult, string>;
 
-    // Analyze volume anomalies using TAAPI
     mutate func analyze_volume_anomaly(
-        // Symbol
         symbol: string,
-        // Interval (1min, 5min, 15min)
         interval: string
     ) -> result<AnomalyResult, string>;
 
-    // Calculate RSI to check overbought/oversold conditions (Alpha Vantage)
     mutate func check_rsi_levels(
-        // Symbol
         symbol: string
     ) -> result<string, string>;
 
-    // Run full anomaly scan for an entity
     query func scan_entity_anomalies(
-        // Entity ID
         entity_id: string
     ) -> result<list<AnomalyResult>, string>
 }

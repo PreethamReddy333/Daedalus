@@ -1,5 +1,3 @@
-// Jira MCP - Creates and manages Jira tickets for surveillance cases
-// Enables team coordination and audit trail for investigations
 
 // ===== Configuration =====
 record JiraConfig {
@@ -39,57 +37,36 @@ record TicketResult {
 interface JiraIntegration {
     config -> JiraConfig;
 
-    // Create a new Jira ticket
     mutate func create_ticket(
-        // Ticket title/summary
         summary: string,
-        // Optional description
         description: option<string>,
-        // Optional priority: High, Medium, Low
         priority: option<string>,
-        // Optional issue type: Task, Bug, Story
         issue_type: option<string>
     ) -> result<TicketResult, string>;
 
-    // Create a ticket specifically for a surveillance case
     mutate func create_case_ticket(
-        // Case ID
         case_id: string,
-        // Subject entity under investigation
         subject_entity: string,
-        // Case summary description
         case_summary: string,
-        // Optional priority
         priority: option<string>
     ) -> result<TicketResult, string>;
 
-    // Close a Jira ticket with resolution
     mutate func close_ticket(
-        // Jira ticket key (e.g., SURV-123)
         ticket_key: string,
-        // Optional resolution (default: Done)
         resolution: option<string>
     ) -> result<TicketResult, string>;
 
-    // Get ticket details by key
     query func get_ticket(
-        // Jira ticket key
         ticket_key: string
     ) -> result<JiraTicket, string>;
 
-    // Add a comment to a ticket
     mutate func add_comment(
-        // Jira ticket key
         ticket_key: string,
-        // Comment text
         comment: string
     ) -> result<TicketResult, string>;
 
-    // Update ticket status
     mutate func update_ticket_status(
-        // Jira ticket key
         ticket_key: string,
-        // New status
         new_status: string
     ) -> result<TicketResult, string>
 }

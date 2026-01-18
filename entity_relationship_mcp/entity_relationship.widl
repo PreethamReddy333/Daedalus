@@ -1,9 +1,3 @@
-// Entity Relationship MCP - Uses Neo4j Aura Graph Database
-// Maps relationships between entities (traders, companies, insiders)
-//
-// Context Cache Feature:
-// - Implements fuzzy resolution for entity_id and company_symbol
-// - Call get_context() FIRST to see cached parameters
 
 // ===== Configuration =====
 record EntityRelationshipConfig {
@@ -17,36 +11,36 @@ record EntityRelationshipConfig {
 
 record Entity {
     entity_id: string,
-    entity_type: string,      // "INDIVIDUAL", "COMPANY", "FUND", "BROKER"
+    entity_type: string,
     name: string,
-    pan_number: string,       // Indian PAN for identification
-    registration_id: string   // SEBI registration if applicable
+    pan_number: string,
+    registration_id: string
 }
 
 record Relationship {
     source_entity_id: string,
     target_entity_id: string,
-    relationship_type: string,  // "FAMILY", "EMPLOYER", "DIRECTOR", "SHAREHOLDER", "BENEFICIAL_OWNER"
+    relationship_type: string,
     relationship_detail: string,
-    strength: u32,              // 1-10 relationship strength
+    strength: u32,
     verified: bool
 }
 
 record EntityConnection {
     entity_id: string,
     connected_entity_id: string,
-    connection_path: string,    // e.g., "A -> B -> C"
-    hops: u32,                  // Number of connections
-    relationship_types: string  // Comma-separated relationship types in path
+    connection_path: string,
+    hops: u32,
+    relationship_types: string
 }
 
 record InsiderStatus {
     entity_id: string,
     company_symbol: string,
     is_insider: bool,
-    insider_type: string,      // "PROMOTER", "DIRECTOR", "KMP", "DESIGNATED_PERSON"
+    insider_type: string,
     designation: string,
-    window_status: string      // "OPEN", "CLOSED"
+    window_status: string
 }
 
 // ===== Context Cache Structures =====
@@ -70,66 +64,34 @@ record QueryContext {
 @mcp
 interface EntityRelationship {
     config -> EntityRelationshipConfig;
-
-    // CALL THIS FIRST - Get context from recent queries
-    // Returns cached entity_ids and company_symbols for fuzzy resolution
     mutate func get_context() -> QueryContext;
-
-    // Get entity details by ID from Neo4j
     mutate func get_entity(
-        // Entity identifier - supports fuzzy matching
         entity_id: string
     ) -> result<Entity, string>;
-
-    // Search entities by name or PAN in Neo4j
     mutate func search_entities(
-        // Search query (name or PAN)
         search_query: string,
-        // Maximum results
         limit: u32
     ) -> result<list<Entity>, string>;
-
-    // Get all relationships for an entity from Neo4j graph
     mutate func get_relationships(
-        // Entity to get relationships for - supports fuzzy matching
         entity_id: string
     ) -> result<list<Relationship>, string>;
-
-    // Get connected entities within N hops using Neo4j graph traversal
     mutate func get_connected_entities(
-        // Starting entity - supports fuzzy matching
         entity_id: string,
-        // Maximum hops to traverse (1-5)
         max_hops: u32
     ) -> result<list<EntityConnection>, string>;
-
-    // Check if entity is an insider for a company
     mutate func check_insider_status(
-        // Entity to check - supports fuzzy matching
         entity_id: string,
-        // Company symbol - supports fuzzy matching
         company_symbol: string
     ) -> result<InsiderStatus, string>;
-
-    // Get all insiders for a company from Neo4j
     mutate func get_company_insiders(
-        // Company symbol - supports fuzzy matching
         company_symbol: string
     ) -> result<list<InsiderStatus>, string>;
-
-    // Check if two entities are connected using Neo4j shortest path
     mutate func are_entities_connected(
-        // First entity - supports fuzzy matching
         entity_id_1: string,
-        // Second entity - supports fuzzy matching
         entity_id_2: string,
-        // Maximum hops to check
         max_hops: u32
     ) -> result<EntityConnection, string>;
-
-    // Get family members of an entity
     mutate func get_family_members(
-        // Entity ID - supports fuzzy matching
         entity_id: string
     ) -> result<list<Entity>, string>
 }
