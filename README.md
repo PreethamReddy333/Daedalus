@@ -10,10 +10,12 @@ A comprehensive market surveillance platform built on **VeilChain** using the **
 | Trade Data | `aaaaaa7ycnpwxv2xks67l4lkczhwgbyawt34u7esvsbfgbnq7putxnvmfm` | Alpha Vantage |
 | Entity Relationship | `aaaaaa36wpz26hhxrmyvo2clmpqqkwqudoqkymfkgltfmtvoceftcfes5u` | Neo4j Aura |
 | Anomaly Detection | `aaaaaa4s4a4xuzmfsxs5gbs3hcm7npikux3jah52oq6rvnty63jw7qpoam` | TAAPI.io |
-| UPSI Database | `aaaaaa...` | Supabase |
+| UPSI Database | `` | Supabase |
 | Regulatory Reports | `aaaaaa77wlohisawkkbxkgc77cb24slezi4a5yx6obqiyjcmwofwx3njfm` | Supabase Storage |
 | Jira MCP | `aaaaaaz5hqfunhcpxhwzf5nplsgtxaydfgupn5u2at47tkz2igw7ipaya4` | Atlassian |
 | Slack Notifier | `aaaaaa4l5izydl4rfdxv5vmxrbdtkqka5htfq55d2d6pchqcplqv5gjbma` | Slack API |
+
+Warning: These contract ID's would most probably be invalid, here just for reference sake.
 
 
 ## Detailed Setup Guide
