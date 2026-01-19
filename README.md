@@ -1,51 +1,7 @@
 # DAEDALUS - Market surveillance and complaince platform
 
 A comprehensive market surveillance platform built on **VeilChain** using the **Model Context Protocol (MCP)** architecture. This system enables real-time detection of market manipulation, insider trading, and regulatory compliance monitoring.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         SURVEILLANCE DASHBOARD                       │
-│                    (Static UI + WebSocket Feed)                      │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      DASHBOARD WEBSERVER                             │
-│              (Central Hub - Aggregates All Data)                     │
-│                                                                      │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐ │
-│  │ Alerts   │ │ Cases    │ │ Workflows│ │ Stats    │ │ Entities  │ │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └───────────┘ │
-└───────┬─────────────┬─────────────┬─────────────┬───────────────────┘
-        │             │             │             │
-        ▼             ▼             ▼             ▼
-┌───────────┐ ┌───────────────┐ ┌──────────┐ ┌────────────┐
-│Trade Data │ │Entity Relation│ │ Anomaly  │ │   UPSI     │
-│   MCP     │ │     MCP       │ │Detection │ │ Database   │
-│           │ │               │ │   MCP    │ │   MCP      │
-│ Alpha     │ │   Neo4j       │ │ TAAPI.io │ │ Supabase   │
-│ Vantage   │ │   Aura        │ │          │ │            │
-└───────────┘ └───────────────┘ └──────────┘ └────────────┘
-
-                    ┌───────────────────────────┐
-                    │     Regulatory Reports    │
-                    │           MCP             │
-                    │    (Supabase Storage)     │
-                    └─────────────┬─────────────┘
-                                  │
-            ┌─────────────────────┼─────────────────────┐
-            ▼                     ▼                     ▼
-      ┌───────────┐        ┌───────────┐        ┌───────────┐
-      │ Jira MCP  │        │   Slack   │        │   Risk    │
-      │           │        │ Notifier  │        │  Scoring  │
-      │ Atlassian │        │   MCP     │        │    MCP    │
-      └───────────┘        └───────────┘        └───────────┘
-```
-
----
-
+  
 ## MCPs Overview
 
 | MCP | Contract ID | External APIs |
